@@ -83,7 +83,10 @@ export const fetchDailyOccupancy = async (month: number, year: number) => {
   }
 };
 
-export const fetchDailyCheckInsCheckOuts = async (month: number, year: number) => {
+export const fetchDailyCheckInsCheckOuts = async (
+  month: number,
+  year: number
+) => {
   try {
     const response = await ADMIN.get("/daily_checkins_checkouts", {
       params: {
@@ -115,7 +118,10 @@ export const fetchDailyCancellations = async (month: number, year: number) => {
   }
 };
 
-export const fetchDailyNoShowsRejected = async (month: number, year: number) => {
+export const fetchDailyNoShowsRejected = async (
+  month: number,
+  year: number
+) => {
   try {
     const response = await ADMIN.get("/daily_no_shows_rejected", {
       params: {
@@ -226,7 +232,11 @@ export const areaReservations = async () => {
 };
 
 // CRUD Users
-export const fetchAllUsers = async (page: number, pageSize: number, archived: boolean = false) => {
+export const fetchAllUsers = async (
+  page: number,
+  pageSize: number,
+  archived: boolean = false
+) => {
   try {
     const response = await ADMIN.get(archived ? "/archived_users" : "/users", {
       params: {
@@ -244,7 +254,7 @@ export const fetchAllUsers = async (page: number, pageSize: number, archived: bo
 
 export const fetchUserDetails = async (userId: number) => {
   try {
-    const response = await ADMIN.get(`/user/${userId}`, {
+    const response = await ADMIN.get(`/show_user/${userId}`, {
       withCredentials: true,
     });
     return response.data;
@@ -269,9 +279,13 @@ export const manageUser = async (userId: number, payload: FormData) => {
 
 export const archiveUser = async (userId: number) => {
   try {
-    const response = await ADMIN.put(`/archived_user/${userId}`, {
-      withCredentials: true,
-    });
+    const response = await ADMIN.put(
+      `/archived_user/${userId}`,
+      {},
+      {
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to archive user: ${error}`);
@@ -281,9 +295,13 @@ export const archiveUser = async (userId: number) => {
 
 export const restoreUser = async (userId: number) => {
   try {
-    const response = await ADMIN.post(`/restore_user/${userId}`, {}, {
-      withCredentials: true,
-    });
+    const response = await ADMIN.post(
+      `/restore_user/${userId}`,
+      {},
+      {
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to restore user: ${error}`);
@@ -291,11 +309,13 @@ export const restoreUser = async (userId: number) => {
   }
 };
 
-export const approveValidId = async (userId: number) => {
+export const approveValidId = async (userId: number, isSeniorOrPwd: boolean) => {
   try {
-    const response = await ADMIN.put(`/approve_valid_id/${userId}`, {}, {
-      withCredentials: true,
-    });
+    const response = await ADMIN.put(
+      `/approve_valid_id/${userId}`,
+      { is_senior_or_pwd: isSeniorOrPwd },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to approve valid ID: ${error}`);
@@ -305,11 +325,11 @@ export const approveValidId = async (userId: number) => {
 
 export const rejectValidId = async (userId: number, reason: string) => {
   try {
-    const response = await ADMIN.put(`/reject_valid_id/${userId}`, {
-      reason,
-    }, {
-      withCredentials: true,
-    });
+    const response = await ADMIN.put(
+      `/reject_valid_id/${userId}`,
+      { reason },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to reject valid ID: ${error}`);
@@ -361,7 +381,10 @@ export const roomDetail = async (roomId: number) => {
   }
 };
 
-export const editRoom = async (roomId: number, payload: FormData): Promise<{ data: any }> => {
+export const editRoom = async (
+  roomId: number,
+  payload: FormData
+): Promise<{ data: any }> => {
   try {
     const response = await ADMIN.put(`/edit_room/${roomId}`, payload, {
       headers: {
@@ -432,7 +455,10 @@ export const areaDetail = async (areaId: number) => {
   }
 };
 
-export const editArea = async (areaId: number, payload: FormData): Promise<{ data: any }> => {
+export const editArea = async (
+  areaId: number,
+  payload: FormData
+): Promise<{ data: any }> => {
   try {
     const response = await ADMIN.put(`/edit_area/${areaId}`, payload, {
       headers: {
@@ -502,7 +528,10 @@ export const readAmenity = async (amenityId: number) => {
   }
 };
 
-export const updateAmenity = async (amenityId: number, payload: { description: string }) => {
+export const updateAmenity = async (
+  amenityId: number,
+  payload: { description: string }
+) => {
   try {
     const response = await ADMIN.put(`/edit_amenity/${amenityId}`, payload, {
       withCredentials: true,
@@ -526,7 +555,10 @@ export const deleteAmenity = async (amenityId: number) => {
   }
 };
 
-export const updateBookingStatus = async (bookingId: number, data: Record<string, any>) => {
+export const updateBookingStatus = async (
+  bookingId: number,
+  data: Record<string, any>
+) => {
   try {
     const payload = {
       status: data.status,
@@ -550,15 +582,23 @@ export const updateBookingStatus = async (bookingId: number, data: Record<string
   }
 };
 
-export const recordPayment = async (bookingId: number, amount: number, transactionType: "booking" | "reservation" | "cancellation_refund" = "booking") => {
+export const recordPayment = async (
+  bookingId: number,
+  amount: number,
+  transactionType: "booking" | "reservation" | "cancellation_refund" = "booking"
+) => {
   try {
-    const response = await ADMIN.post(`/booking/${bookingId}/payment`, {
-      amount,
-      transaction_type: transactionType,
-    }, {
-      headers: { "Content-Type": "application/json" },
-      withCredentials: true,
-    });
+    const response = await ADMIN.post(
+      `/booking/${bookingId}/payment`,
+      {
+        amount,
+        transaction_type: transactionType,
+      },
+      {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to record payment: ${error}`);
@@ -594,7 +634,9 @@ export const getAllBookings = async (page: number, pageSize: number) => {
   }
 };
 
-export const fetchOccupancyRate = async (period: "daily" | "weekly" | "monthly" | "yearly" = "monthly") => {
+export const fetchOccupancyRate = async (
+  period: "daily" | "weekly" | "monthly" | "yearly" = "monthly"
+) => {
   try {
     const response = await ADMIN.get("/occupancy_rate", {
       params: { period },
@@ -607,7 +649,9 @@ export const fetchOccupancyRate = async (period: "daily" | "weekly" | "monthly" 
   }
 };
 
-export const fetchRevenueAnalytics = async (period: "daily" | "weekly" | "monthly" | "yearly" = "monthly") => {
+export const fetchRevenueAnalytics = async (
+  period: "daily" | "weekly" | "monthly" | "yearly" = "monthly"
+) => {
   try {
     const response = await ADMIN.get("/revenue_analytics", {
       params: { period },
@@ -644,15 +688,22 @@ export const fetchCustomerAnalytics = async () => {
   }
 };
 
-export const generatePdfReport = async (reportType: string, dateRange?: { start: string; end: string }) => {
+export const generatePdfReport = async (
+  reportType: string,
+  dateRange?: { start: string; end: string }
+) => {
   try {
-    const response = await ADMIN.post("/generate_report", {
-      report_type: reportType,
-      ...(dateRange && { date_range: dateRange }),
-    }, {
-      responseType: "blob",
-      withCredentials: true,
-    });
+    const response = await ADMIN.post(
+      "/generate_report",
+      {
+        report_type: reportType,
+        ...(dateRange && { date_range: dateRange }),
+      },
+      {
+        responseType: "blob",
+        withCredentials: true,
+      }
+    );
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");

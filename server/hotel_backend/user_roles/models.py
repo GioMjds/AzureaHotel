@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from cloudinary.models import CloudinaryField
 
+PWD_SENIOR_DISCOUNT_PERCENT = 10
+
 # Create your models here.
 class CustomUsers(AbstractUser):
     ROLE_CHOICES = [
@@ -17,6 +19,7 @@ class CustomUsers(AbstractUser):
         ('philhealth_id', 'PhilHealth ID'),
         ('prc_id', 'PRC ID'),
         ('student_id', 'Student ID'),
+        ('senior_citizen_id', 'Senior Citizen ID'),
         ('other', 'Other Government-Issued ID'),
     ]
     VALID_ID_STATUS = [
@@ -40,6 +43,7 @@ class CustomUsers(AbstractUser):
     valid_id_back = CloudinaryField('valid_id_back', null=True, blank=True)
     is_verified = models.CharField(max_length=60, null=True, blank=True, choices=VALID_ID_STATUS, default='unverified')
     valid_id_rejection_reason = models.TextField(null=True, blank=True)
+    is_senior_or_pwd = models.BooleanField(default=False)
 
     class Meta: 
         db_table = 'users'

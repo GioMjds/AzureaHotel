@@ -44,7 +44,7 @@ const GuestLayout = lazy(() => import("./layout/guest/GuestLayout"));
 const GuestFoodOrders = lazy(() => import("./pages/guests/GuestFoodOrders"));
 
 const App = () => {
-  const { isAuthenticated, role } = useUserContext();
+  const { isAuthenticated, role, userDetails } = useUserContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -75,6 +75,8 @@ const App = () => {
     }
     return <Homepage />;
   }, [isAuthenticated, role]);
+
+  console.table(`User Details: ${JSON.stringify(userDetails, null, 2)}`);
 
   return (
     <>

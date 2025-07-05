@@ -34,12 +34,12 @@ export interface IUser {
     valid_id_back?: string;
     valid_id_type?: string;
     is_verified?: string;
+    is_senior_or_pwd?: boolean;
 }
 
 export interface IUserFormModalProps {
     isOpen: boolean;
     cancel: () => void;
-    onSave: (user: IUser) => Promise<void>;
     userData?: IUser | null;
     loading?: boolean;
 }

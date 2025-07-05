@@ -1,3 +1,9 @@
+// Helper for formatting currency with place value
+const formatCurrency = (amount: number | string | undefined) => {
+  if (amount === undefined || amount === null) return '';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return num.toLocaleString('en-PH', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -342,7 +348,7 @@ const GuestBookings = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap text-lg font-semibold text-gray-900">
-                          {typeof totalAmount === 'number' ? totalAmount.toLocaleString() : totalAmount}
+                          ₱{formatCurrency(totalAmount)}
                         </td>
                         <td className="p-2 whitespace-nowrap text-sm font-semibold">
                           <div className="flex justify-center space-x-2">

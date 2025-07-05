@@ -632,7 +632,8 @@ def user_login(request):
             'role': auth_user.role,
             'profile_image': auth_user.profile_image.url if auth_user.profile_image else "",
             'is_verified': user.is_verified,
-            'last_booking_date': user.last_booking_date
+            'last_booking_date': user.last_booking_date,
+            'is_senior_or_pwd': user.is_senior_or_pwd,
         }
         
         response = Response({
@@ -687,7 +688,8 @@ def user_auth(request):
                 'last_name': user.last_name,
                 'profile_image': user.profile_image.url if user.profile_image else "",
                 'is_verified': user.is_verified,
-                'last_booking_date': user.last_booking_date
+                'last_booking_date': user.last_booking_date,
+                'is_senior_or_pwd': user.is_senior_or_pwd,
             }
         }, status=status.HTTP_200_OK)
     except Exception as e:

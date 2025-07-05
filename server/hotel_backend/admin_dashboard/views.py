@@ -515,7 +515,7 @@ def show_area_details(request, area_id):
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def edit_area(request, area_id):    
+def edit_area(request, area_id):
     print(f"edit_area Data: {request.data}")
     print(f"edit_area FILES: {request.FILES}")
     try:
@@ -1099,7 +1099,16 @@ def manage_user(request, user_id):
                 password = data.get('password')
                 if password:
                     user.set_password(password)
-                
+
+                # Handle PWD/Senior Discount checkbox
+                is_senior_or_pwd = data.get('is_senior_or_pwd')
+                if is_senior_or_pwd is not None:
+                    # Accept both boolean and string 'true'/'false'
+                    if is_senior_or_pwd in [True, 'true', 'True', '1', 1]:
+                        user.is_senior_or_pwd = True
+                    else:
+                        user.is_senior_or_pwd = False
+
                 try:
                     user.save()
                     return Response({
@@ -1109,7 +1118,8 @@ def manage_user(request, user_id):
                             'email': user.email,
                             'first_name': user.first_name,
                             'last_name': user.last_name,
-                            'role': user.role
+                            'role': user.role,
+                            'is_senior_or_pwd': user.is_senior_or_pwd
                         }
                     })
                 except ValidationError as e:
@@ -1136,22 +1146,51 @@ def archive_user(request, user_id):
 @permission_classes([IsAuthenticated])
 def approve_valid_id(request, user_id):
     try:
+        print(f"[approve_valid_id] Called for user_id={user_id}")
         user = CustomUsers.objects.get(id=user_id)
         user.is_verified = 'verified'
         user.valid_id_rejection_reason = None
+
+        # Accept both form-data and JSON
+        is_senior_or_pwd = request.data.get('is_senior_or_pwd')
+        print(f"[approve_valid_id] Raw is_senior_or_pwd from request.data: {is_senior_or_pwd}")
+        if is_senior_or_pwd is None and hasattr(request, 'data') and hasattr(request.data, 'dict'):
+            # Try to get from request.data.dict() for form-data
+            is_senior_or_pwd = request.data.dict().get('is_senior_or_pwd')
+            print(f"[approve_valid_id] is_senior_or_pwd from request.data.dict(): {is_senior_or_pwd}")
+
+        if is_senior_or_pwd is not None:
+            print(f"[approve_valid_id] Checking is_senior_or_pwd value: {is_senior_or_pwd} (type: {type(is_senior_or_pwd)})")
+            if str(is_senior_or_pwd).lower() in ['true', '1', 'yes', 'on']:
+                user.is_senior_or_pwd = True
+            else:
+                user.is_senior_or_pwd = False
+        print(f"[approve_valid_id] user.is_senior_or_pwd after processing: {user.is_senior_or_pwd}")
         user.save()
+
+        # Apply discount to all future bookings if PWD/Senior
+        if user.is_senior_or_pwd:
+            print(f"[approve_valid_id] Applying discount to all future bookings for user {user.id}")
+            bookings = Bookings.objects.filter(user=user, status__in=['reserved', 'checked_in'])
+            for booking in bookings:
+                if hasattr(booking, 'apply_pwd_senior_discount'):
+                    print(f"[approve_valid_id] Applying discount to booking {booking.id}")
+                    booking.apply_pwd_senior_discount()
+
         Notification.objects.create(
             user=user,
             message="Your account has been verified! You may now enjoy unlimited bookings.",
             notification_type="verified"
         )
+        # Use serializer for consistent response
+        serializer = CustomUserSerializer(user)
+        print(f"[approve_valid_id] Returning user.is_verified={user.is_verified}, is_senior_or_pwd={user.is_senior_or_pwd}")
         return Response({
             'message': 'Valid ID approved',
-            'user_id': user.id,
-            'is_verified': user.is_verified,
-            'valid_id_rejection_reason': user.valid_id_rejection_reason
+            'user': serializer.data
         }, status=status.HTTP_200_OK)
     except CustomUsers.DoesNotExist:
+        print(f"[approve_valid_id] CustomUsers.DoesNotExist for user_id={user_id}")
         return Response({
             'error': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
@@ -1486,7 +1525,7 @@ def area_revenue(request):
         return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def area_bookings(request):

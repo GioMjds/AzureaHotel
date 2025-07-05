@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { FC, useEffect, useState } from "react"
 import { IdCard, X, AlertCircle } from "lucide-react"
 import { useForm, SubmitHandler } from "react-hook-form"
+import { ID_TYPE_OPTIONS } from "../../constants/GuestProfileOptions"
 
 interface ValidIDUploadModalProps {
     isOpen: boolean;
@@ -15,18 +16,6 @@ interface FormInputs {
     frontFile: FileList;
     backFile: FileList;
 }
-
-const ID_TYPE_OPTIONS = [
-    { value: 'passport', label: 'Passport' },
-    { value: 'driver_license', label: "Driver's License" },
-    { value: 'national_id', label: 'National ID' },
-    { value: 'sss_id', label: 'SSS ID' },
-    { value: 'umid', label: 'Unified Multi-Purpose ID (UMID)' },
-    { value: 'philhealth_id', label: 'PhilHealth ID' },
-    { value: 'prc_id', label: 'PRC ID' },
-    { value: 'student_id', label: 'Student ID' },
-    { value: 'other', label: 'Other Government-Issued ID' },
-]
 
 const ValidIDUploadModal: FC<ValidIDUploadModalProps> = ({ isOpen, onClose, onUpload, isLoading }) => {
     const [frontPreview, setFrontPreview] = useState<string | null>(null);
@@ -47,7 +36,6 @@ const ValidIDUploadModal: FC<ValidIDUploadModalProps> = ({ isOpen, onClose, onUp
     const frontFileWatch = watch("frontFile");
     const backFileWatch = watch("backFile");
     
-    // Generate previews when files change
     useEffect(() => {
         if (frontFileWatch?.[0]) {
             const objectUrl = URL.createObjectURL(frontFileWatch[0]);
@@ -81,7 +69,6 @@ const ValidIDUploadModal: FC<ValidIDUploadModalProps> = ({ isOpen, onClose, onUp
         onClose();
     };
 
-    // Error message component for form fields
     const ErrorMessage: FC<{ message?: string }> = ({ message }) => {
         if (!message) return null;
         

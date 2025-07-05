@@ -50,6 +50,14 @@ class Bookings(models.Model):
     payment_proof = CloudinaryField('payment_proof', null=True, blank=True)
     payment_date = models.DateTimeField(null=True, blank=True)
     number_of_guests = models.PositiveIntegerField(default=1)
+    is_discounted = models.BooleanField(default=False)
+
+    def apply_pwd_senior_discount(self):
+        from user_roles.models import PWD_SENIOR_DISCOUNT_PERCENT
+        if not self.is_discounted and self.total_price:
+            self.total_price = float(self.total_price) * (1 - PWD_SENIOR_DISCOUNT_PERCENT / 100)
+            self.is_discounted = True
+            self.save()
     
     class Meta:
         db_table = 'bookings'

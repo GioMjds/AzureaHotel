@@ -1,15 +1,16 @@
 import { BookingFormData } from "../types/BookingClient";
 
 export const VALID_ID_CHOICES: [string, string][] = [
-    ['passport',       'Passport'],
-    ['driver_license', "Driver's License"],
-    ['national_id',    'National ID'],
-    ['sss_id',         'SSS ID'],
-    ['umid',           'Unified Multi-Purpose ID (UMID)'],
-    ['philhealth_id',  'PhilHealth ID'],
-    ['prc_id',         'PRC ID'],
-    ['student_id',     'Student ID'],
-    ['other',          'Other Government-Issued ID'],
+    ['passport',          'Passport'],
+    ['driver_license',    "Driver's License"],
+    ['national_id',       'National ID'],
+    ['sss_id',            'SSS ID'],
+    ['umid',              'Unified Multi-Purpose ID (UMID)'],
+    ['philhealth_id',     'PhilHealth ID'],
+    ['prc_id',            'PRC ID'],
+    ['student_id',        'Student ID'],
+    ['senior_citizen_id', 'Senior Citizen ID'],
+    ['other',             'Other Government-Issued ID'],
 ];
 
 export const createBookingFormData = (bookingData: BookingFormData) => {

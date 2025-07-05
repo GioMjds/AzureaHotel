@@ -38,6 +38,12 @@ export interface FormattedBooking {
     paymentMethod?: string;
     paymentProof?: string;
     downPayment?: number;
+    originalPrice?: number;
+    originalPriceFormatted?: string;
+    discountPercent?: number;
+    discountedPrice?: number;
+    discountedPriceFormatted?: string;
+    downPaymentFormatted?: string;
 }
 
 export interface RoomData {

@@ -7,10 +7,10 @@ import { toast } from "react-toastify";
 import EditUserModal from "../../components/admin/EditUserModal";
 import Modal from "../../components/Modal";
 import EventLoader from "../../motions/loaders/EventLoader";
-import { archiveUser, fetchAllUsers, manageUser } from "../../services/Admin";
+import ManageAmenitiesSkeleton from "../../motions/skeletons/ManageAmenitiesSkeleton";
+import { archiveUser, fetchAllUsers } from "../../services/Admin";
 import { IUser } from "../../types/UsersAdmin";
 import Error from "../_ErrorBoundary";
-import ManageAmenitiesSkeleton from "../../motions/skeletons/ManageAmenitiesSkeleton";
 
 type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
 
@@ -35,20 +35,6 @@ const ManageUsers: FC = () => {
   }>({
     queryKey: ["users", currentPage],
     queryFn: () => fetchAllUsers(currentPage, pageSize),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: FormData }) => manageUser(id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast.success("User updated successfully");
-      setEditModal(false);
-      setIsSubmitting(false);
-    },
-    onError: () => {
-      toast.error("Failed to update user");
-      setIsSubmitting(false);
-    }
   });
 
   const deleteMutation = useMutation({
@@ -86,20 +72,14 @@ const ManageUsers: FC = () => {
     }
   }, [deleteMutation, selectedUser]);
 
-  const handleSaveUser = useCallback(async (user: IUser) => {
-    setIsSubmitting(true);
-    const formData = new FormData();
-    formData.append("first_name", user.first_name);
-    formData.append("last_name", user.last_name);
-    formData.append("email", user.email);
-    formData.append("role", user.role || "guest");
-
-    if (user.password) formData.append("password", user.password);
-
-    await updateMutation.mutateAsync({ id: user.id, payload: formData });
-  }, [updateMutation]);
-
-  const getVerificationStatus = (status: VerificationStatus) => {
+  const getVerificationStatus = (status: VerificationStatus, isSeniorOrPwd?: boolean) => {
+    if (isSeniorOrPwd) {
+      return (
+        <span className="inline-flex uppercase font-semibold items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-md mr-2">
+          ✅ Verified (20% Off)
+        </span>
+      );
+    }
     switch (status) {
       case "verified":
         return (
@@ -172,7 +152,7 @@ const ManageUsers: FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-700">{user.last_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-700">{user.email}</td>
                     <td className="px-6 py-4 text-center whitespace-nowrap">
-                      {getVerificationStatus(user.is_verified)}
+                      {getVerificationStatus(user.is_verified, user.is_senior_or_pwd)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-md font-medium text-center">
                       <div className="flex items-center justify-center space-x-2">
@@ -230,7 +210,6 @@ const ManageUsers: FC = () => {
           setEditModal(false);
           setSelectedUser(null);
         }}
-        onSave={handleSaveUser}
         userData={selectedUser}
         loading={isSubmitting}
       />

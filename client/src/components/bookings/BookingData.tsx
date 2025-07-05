@@ -5,6 +5,7 @@ import { fetchBookingDetail } from "../../services/Booking";
 import BookingCard from "./BookingCard";
 import { formatDate } from "../../utils/formatters";
 import { BookingDataProps, BookingDataTypes, FormattedBooking } from "../../types/BookingGuest";
+import { formatCurrency } from "../../utils/formatters";
 
 const BookingData = memo(({ bookingId }: BookingDataProps) => {
   const effectiveBookingId = bookingId;
@@ -36,6 +37,7 @@ const BookingData = memo(({ bookingId }: BookingDataProps) => {
       numberOfGuests: bookingData?.number_of_guests || 1,
       arrivalTime: bookingData?.time_of_arrival,
       downPayment: bookingData?.down_payment,
+      downPaymentFormatted: formatCurrency(bookingData?.down_payment),
     };
 
     if (bookingData?.user) {
@@ -44,6 +46,22 @@ const BookingData = memo(({ bookingId }: BookingDataProps) => {
         email: bookingData.user.email,
         phoneNumber: bookingData.phone_number
       };
+    }
+
+    if (!isVenueBooking) {
+      const roomDetails = bookingData?.room_details || bookingData?.room;
+      const roomWithDiscount = roomDetails as (typeof roomDetails & { discount_percent?: number; discounted_price?: number | string });
+      result.originalPrice = roomWithDiscount?.room_price ? Number(roomWithDiscount.room_price) : (bookingData?.total_price ?? 0);
+      result.discountPercent = roomWithDiscount?.discount_percent ?? 0;
+      result.discountedPrice = roomWithDiscount?.discounted_price ? Number(roomWithDiscount.discounted_price) : (bookingData?.total_price ?? 0);
+      result.originalPriceFormatted = formatCurrency(result.originalPrice);
+      result.discountedPriceFormatted = formatCurrency(result.discountedPrice);
+    } else {
+      result.originalPrice = bookingData?.total_price ?? 0;
+      result.discountPercent = 0;
+      result.discountedPrice = bookingData?.total_price ?? 0;
+      result.originalPriceFormatted = formatCurrency(result.originalPrice);
+      result.discountedPriceFormatted = formatCurrency(result.discountedPrice);
     }
 
     if (isVenueBooking) {

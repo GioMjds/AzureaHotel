@@ -1,27 +1,29 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FC, memo, useEffect, useState } from 'react';
 import { IdCard } from 'lucide-react';
+import { FC, memo, useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import { approveValidId, rejectValidId } from '../../services/Admin';
 import { IUserFormModalProps } from '../../types/UsersAdmin';
 import { getValidIdLabel } from '../../utils/booking';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { approveValidId, rejectValidId } from '../../services/Admin';
-import { toast } from 'react-toastify';
 
-const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData }) => {
+const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData, loading }) => {
     const [reason, setReason] = useState<string>("");
     const [showReasonField, setShowReasonField] = useState<boolean>(false);
+    const [isSeniorOrPwd, setIsSeniorOrPwd] = useState<boolean>(userData?.is_senior_or_pwd || false);
 
     const queryClient = useQueryClient();
 
     useEffect(() => {
         setReason("");
         setShowReasonField(false);
-    }, [isOpen])
+        setIsSeniorOrPwd(userData?.is_senior_or_pwd || false);
+    }, [isOpen, userData])
 
     const approveMutation = useMutation({
-        mutationFn: () => approveValidId(userData!.id),
+        mutationFn: () => approveValidId(userData!.id, isSeniorOrPwd),
         onSuccess: (res) => {
-            queryClient.invalidateQueries({ queryKey: ['users']});
+            queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success(res.message);
             cancel();
         },
@@ -41,6 +43,11 @@ const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData }) =>
         if (reason.trim()) rejectMutation.mutate(reason.trim());
         else toast.error('Rejection reason cannot be empty');
     }
+
+    const handleApprove = () => {
+        console.log('[EditUserModal] Approve clicked. isSeniorOrPwd:', isSeniorOrPwd);
+        approveMutation.mutate();
+    };
 
     if (!isOpen || !userData) return null;
 
@@ -94,6 +101,20 @@ const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData }) =>
                         )}
                     </div>
 
+                    {/* PWD/Senior Discount Checkbox */}
+                    <div className="mb-4 flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="seniorOrPwd"
+                            checked={isSeniorOrPwd}
+                            onChange={e => setIsSeniorOrPwd(e.target.checked)}
+                            className="form-checkbox h-5 w-5 text-purple-600"
+                        />
+                        <label htmlFor="seniorOrPwd" className="text-md font-medium text-gray-700">
+                            Apply PWD / Senior Discount (20% off all bookings)
+                        </label>
+                    </div>
+
                     {/* Rejection Reason Field (conditional) */}
                     {showReasonField && (
                         <div className="mb-4">
@@ -115,11 +136,11 @@ const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData }) =>
                         <button onClick={cancel} className="px-5 py-2 bg-gray-100 rounded-lg text-gray-600 hover:text-gray-800 cursor-pointer transition-colors duration-300">Cancel</button>
 
                         <button
-                            onClick={() => approveMutation.mutate()}
-                            disabled={approveMutation.isPending}
+                            onClick={handleApprove}
+                            disabled={approveMutation.isPending || loading}
                             className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors duration-300 cursor-pointer"
                         >
-                            {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                            {approveMutation.isPending || loading ? 'Approving...' : 'Approve'}
                         </button>
 
                         {!showReasonField ? (

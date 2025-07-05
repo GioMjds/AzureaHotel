@@ -13,6 +13,8 @@ from django.db.models import Sum
 from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
 import uuid
 
+PWD_SENIOR_DISCOUNT_PERCENT = 20
+
 class BookingSerializer(serializers.ModelSerializer):
     user = CustomUserSerializer()
     room_details = RoomSerializer(source='room', read_only=True)
@@ -84,28 +86,49 @@ class BookingSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Add original price and discount percent for frontend display
-        if instance.total_price is not None and instance.room:
+        user = instance.user if hasattr(instance, 'user') else None
+        discount_percent = 0
+        # Apply PWD/Senior Discount if user is eligible
+        if user and getattr(user, 'is_senior_or_pwd', False):
+            discount_percent = PWD_SENIOR_DISCOUNT_PERCENT
+        nights = (instance.check_out_date - instance.check_in_date).days if instance.check_in_date and instance.check_out_date else 1
+        if instance.room:
             try:
-                nights = (instance.check_out_date - instance.check_in_date).days
-                price_per_night = float(instance.room.price_per_night or instance.room.room_price)
+                price_per_night = float(getattr(instance.room, 'price_per_night', None) or instance.room.room_price)
                 original_total = price_per_night * nights
-                discount_percent = 0
-                if nights >= 7:
-                    discount_percent = 10
-                elif nights >= 3:
-                    discount_percent = 5
+                # Apply long stay discount if not PWD/Senior
+                if discount_percent == 0:
+                    if nights >= 7:
+                        discount_percent = 10
+                    elif nights >= 3:
+                        discount_percent = 5
+                discounted_price = original_total * (1 - discount_percent / 100)
                 representation['original_price'] = original_total
                 representation['discount_percent'] = discount_percent
+                representation['discounted_price'] = round(discounted_price, 2)
                 representation['total_price'] = float(instance.total_price)
                 if hasattr(instance, 'down_payment') and instance.down_payment is not None:
                     representation['down_payment'] = float(instance.down_payment)
             except Exception:
                 representation['original_price'] = None
                 representation['discount_percent'] = 0
+                representation['discounted_price'] = None
+        elif instance.area:
+            try:
+                original_total = float(instance.total_price)
+                discounted_price = original_total * (1 - discount_percent / 100)
+                representation['original_price'] = original_total
+                representation['discount_percent'] = discount_percent
+                representation['discounted_price'] = round(discounted_price, 2)
+                representation['total_price'] = float(instance.total_price)
+            except Exception:
+                representation['original_price'] = None
+                representation['discount_percent'] = 0
+                representation['discounted_price'] = None
         else:
             representation['original_price'] = None
             representation['discount_percent'] = 0
+            representation['discounted_price'] = None
         return representation
 
 class BookingRequestSerializer(serializers.Serializer):
@@ -156,7 +179,6 @@ class BookingRequestSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
-        
         payment_proof_file = request.FILES.get('paymentProof')
         payment_method = validated_data.get('paymentMethod', 'physical')
         payment_proof_url = None
@@ -172,7 +194,7 @@ class BookingRequestSerializer(serializers.Serializer):
                 payment_proof_url = upload_result['secure_url']
             except Exception as e:
                 raise serializers.ValidationError(f"Error uploading payment proof: {str(e)}")
-        
+
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             user = request.user
             if user.first_name != validated_data['firstName'] or user.last_name != validated_data['lastName']:
@@ -193,7 +215,6 @@ class BookingRequestSerializer(serializers.Serializer):
                         last_name=validated_data['lastName'],
                         role='guest'
                     )
-                    # Set phone_number separately if the field exists
                     if hasattr(user, 'phone_number'):
                         user.phone_number = validated_data['phoneNumber']
                         user.save()
@@ -213,18 +234,21 @@ class BookingRequestSerializer(serializers.Serializer):
                         last_name=validated_data['lastName'],
                         role='guest'
                     )
-                    # Set phone_number separately if the field exists
                     if hasattr(user, 'phone_number'):
                         user.phone_number = validated_data['phoneNumber']
                         user.save()
 
         is_venue_booking = validated_data.get('isVenueBooking', False)
 
-        # --- Long Stay Discount Calculation ---
         check_in = validated_data.get('checkIn')
         check_out = validated_data.get('checkOut')
         nights = (check_out - check_in).days if check_in and check_out else 1
         total_price = 0
+
+        # --- PWD/Senior Discount Logic ---
+        discount_percent = 0
+        if hasattr(user, 'is_senior_or_pwd') and user.is_senior_or_pwd:
+            discount_percent = PWD_SENIOR_DISCOUNT_PERCENT
 
         if is_venue_booking:
             try:
@@ -237,7 +261,9 @@ class BookingRequestSerializer(serializers.Serializer):
                 if 'endTime' in validated_data and validated_data['endTime']:
                     end_time = datetime.strptime(validated_data['endTime'], "%H:%M").time()
                 # For venue bookings, fallback to frontend value or 0
-                total_price = float(validated_data.get('totalPrice', 0))
+                original_price = float(validated_data.get('totalPrice', 0))
+                discounted_price = original_price * (1 - discount_percent / 100)
+                total_price = discounted_price
                 booking = Bookings.objects.create(
                     user=user,
                     area=area,
@@ -266,12 +292,13 @@ class BookingRequestSerializer(serializers.Serializer):
             try:
                 room = Rooms.objects.get(id=validated_data['roomId'])
                 price_per_night = float(room.room_price)
-                discount = 0
-                if nights >= 7:
-                    discount = 0.10
-                elif nights >= 3:
-                    discount = 0.05
-                discounted_price = price_per_night * (1 - discount)
+                # If not PWD/Senior, apply long stay discount
+                if discount_percent == 0:
+                    if nights >= 7:
+                        discount_percent = 10
+                    elif nights >= 3:
+                        discount_percent = 5
+                discounted_price = price_per_night * (1 - discount_percent / 100)
                 total_price = discounted_price * nights
                 booking = Bookings.objects.create(
                     user=user,
