@@ -90,7 +90,7 @@ export const transaction = axios.create({
 });
 
 export const food = axios.create({
-  baseURL: `${import.meta.env.FLASK_URL}/food`,
+  baseURL: `http://10.0.0.34:5000/Admin`,
   headers: {
     "Content-Type": "application/json",
   },
