@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Eye, Search, Calendar, SearchIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Eye, Search, SearchIcon } from "lucide-react";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { fetchUserBookings } from "../../services/Booking";
-import { formatDate, getStatusColor, formatStatus } from "../../utils/formatters";
-import { useUserContext } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import GuestBookingsSkeleton from "../../motions/skeletons/GuestBookingsSkeleton";
-import GuestBookingsError from "../../motions/error-fallback/GuestBookingsError";
 import ViewBookingDetailsModal from "../../components/guests/ViewBookingDetailsModal";
+import { useUserContext } from "../../contexts/AuthContext";
+import GuestBookingsError from "../../motions/error-fallback/GuestBookingsError";
+import GuestBookingsSkeleton from "../../motions/skeletons/GuestBookingsSkeleton";
+import { fetchUserBookings } from "../../services/Booking";
+import { formatCurrency, formatDate, formatStatus, getStatusColor, parsePriceValue } from "../../utils/formatters";
 
 const GuestCancellations: FC = () => {
   const { userDetails } = useUserContext();
@@ -167,9 +167,7 @@ const GuestCancellations: FC = () => {
                       }
 
                       const venuePrice =
-                        parseFloat((booking.price_per_hour || booking.area_details?.price_per_hour || "0")
-                          .toString()
-                          .replace(/[^0-9.]/g, '')) || 0;
+                        parsePriceValue(booking.price_per_hour || booking.area_details?.price_per_hour || "0");
 
                       totalAmount = booking.total_price || booking.total_amount || (venuePrice * duration);
                     } else {
@@ -192,9 +190,7 @@ const GuestCancellations: FC = () => {
                       }
 
                       const nightlyRate =
-                        parseFloat((booking.room_price || booking.room_details?.room_price || "0")
-                          .toString()
-                          .replace(/[^0-9.]/g, '')) || 0;
+                        parsePriceValue(booking.room_price || booking.room_details?.room_price || "0");
 
                       totalAmount = booking.total_price || booking.total_amount || (nightlyRate * nights);
                     }
@@ -242,7 +238,7 @@ const GuestCancellations: FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap text-lg font-semibold text-gray-900">
-                          {typeof totalAmount === 'number' ? totalAmount.toLocaleString() : totalAmount}
+                          {formatCurrency(typeof totalAmount === 'string' ? parsePriceValue(totalAmount) : totalAmount || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
                           <div className="flex justify-center space-x-2">

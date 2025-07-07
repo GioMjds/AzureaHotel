@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-refresh/only-export-components */
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, FC, ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { authenticateUser } from "../services/Auth";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface User {
     id: number;
@@ -12,6 +12,7 @@ interface User {
     is_verified?: string;
     last_booking_date?: string | null;
     role?: string;
+    is_senior_or_pwd?: boolean;
 }
 
 interface UserContextType {

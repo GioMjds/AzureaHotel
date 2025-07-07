@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addMonths, differenceInCalendarDays, eachDayOfInterval, endOfMonth, format, isBefore, isEqual, isSameDay, isWithinInterval, parseISO, startOfDay, startOfMonth } from 'date-fns';
 import { ArrowLeft, CircleAlert } from 'lucide-react';
@@ -7,8 +6,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useUserContext } from '../contexts/AuthContext';
 import { fetchRoomBookings, fetchRoomById } from '../services/Booking';
 import { AmenityObject, BookingData, BookingsByDate, RoomData } from '../types/BookingClient';
+import { calculateRoomPricing, formatPrice, getDiscountLabel } from '../utils/pricingUtils';
 
-const isAmenityObject = (amenity: any): amenity is AmenityObject => {
+const isAmenityObject = (amenity: unknown): amenity is AmenityObject => {
     return amenity && typeof amenity === 'object' && 'description' in amenity;
 }
 
@@ -151,25 +151,16 @@ const BookingCalendar = () => {
 
             setMaxDayExceed(days > 30);
 
-            let priceValue = 0;
-            let discountedValue = 0;
-            let hasDiscount = false;
-            const priceString = roomData.price_per_night || roomData.room_price;
-            try {
-                const numericValue = priceString?.toString().replace(/[^\d.]/g, '') || '0';
-                priceValue = parseFloat(numericValue) || 0;
-                if (roomData.discount_percent && roomData.discount_percent > 0 && roomData.discounted_price) {
-                    const discountedNumeric = roomData.discounted_price?.toString().replace(/[^\d.]/g, '') || '0';
-                    discountedValue = parseFloat(discountedNumeric) || 0;
-                    hasDiscount = true;
-                }
-            } catch (error) {
-                console.error(`Error parsing room price: ${error}`);
-                priceValue = 0;
-            }
-            setTotalPrice(hasDiscount ? discountedValue * days : priceValue * days);
+            // Use shared pricing utility
+            const pricingResult = calculateRoomPricing({
+                roomData,
+                userDetails,
+                nights: days
+            });
+
+            setTotalPrice(pricingResult.totalPrice);
         }
-    }, [checkInDate, checkOutDate, roomData]);
+    }, [checkInDate, checkOutDate, roomData, userDetails]);
 
     const months = useMemo(() => [currentMonth, addMonths(currentMonth, 1)], [currentMonth]);
 
@@ -223,7 +214,6 @@ const BookingCalendar = () => {
                 setCheckOutDate(date);
             }
         }
-
 
         if (checkInDate && checkOutDate) {
             const daysBetween = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -535,43 +525,35 @@ const BookingCalendar = () => {
                             {/* Price/Discount Display - always in the same spot */}
                             <div className="mb-4">
                                 {(() => {
-                                    let priceValue = 0;
-                                    let discountPercent = 0;
-                                    let discountedValue = 0;
-                                    const priceString = roomData.price_per_night || roomData.room_price;
-                                    try {
-                                        const numericValue = priceString?.toString().replace(/[^\d.]/g, '') || '0';
-                                        priceValue = parseFloat(numericValue) || 0;
-                                        if (numberOfNights >= 7) {
-                                            discountPercent = 10;
-                                        } else if (numberOfNights >= 3) {
-                                            discountPercent = 5;
-                                        }
-                                        discountedValue = priceValue * (1 - discountPercent / 100);
-                                    } catch {
-                                        priceValue = 0;
-                                    }
+                                    const pricingResult = calculateRoomPricing({
+                                        roomData,
+                                        userDetails,
+                                        nights: numberOfNights
+                                    });
+
+                                    const hasDiscount = pricingResult.discountType !== 'none';
+
                                     return (
                                         <>
-                                            {discountPercent > 0 ? (
+                                            {hasDiscount ? (
                                                 <>
                                                     <div className="flex justify-between text-gray-500 line-through text-base">
                                                         <span>Original Price:</span>
-                                                        <span>₱{(priceValue * numberOfNights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                        <span>{formatPrice(pricingResult.originalPrice * numberOfNights)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-green-600 font-semibold text-base">
-                                                        <span>Long Stay Discount ({discountPercent}%):</span>
-                                                        <span>-₱{((priceValue * numberOfNights) - (discountedValue * numberOfNights)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                        <span>{getDiscountLabel(pricingResult.discountType, pricingResult.discountPercent)}:</span>
+                                                        <span>-{formatPrice((pricingResult.originalPrice - pricingResult.finalPrice) * numberOfNights)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-blue-600 font-bold text-xl mt-2">
                                                         <span>Total Price:</span>
-                                                        <span>₱{(discountedValue * numberOfNights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                        <span>{formatPrice(pricingResult.totalPrice)}</span>
                                                     </div>
                                                 </>
                                             ) : (
                                                 <div className="flex justify-between text-blue-600 font-bold text-xl">
                                                     <span>Total Price:</span>
-                                                    <span>₱{(priceValue * numberOfNights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                    <span>{formatPrice(pricingResult.totalPrice)}</span>
                                                 </div>
                                             )}
                                         </>

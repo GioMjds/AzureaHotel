@@ -102,7 +102,6 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
     };
 
     const handlePlaceOrder = () => {
-        console.log("Placing order:", cart);
         setCart([]);
         onClose();
     };

@@ -69,8 +69,8 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
   };
 
   const truncatedDescription =
-    description && description.length > 65
-      ? `${description.substring(0, 65)}...`
+    description && description.length > 85
+      ? `${description.substring(0, 85)}...`
       : description || "No description available.";
 
   const buttonClass = isAuthenticated
@@ -103,26 +103,26 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
             <h1 className="text-xl font-bold text-gray-800 group-hover:text-purple-700 transition-colors">
               {name}
             </h1>
-            <span className="text-lg font-semibold text-purple-600 flex flex-row items-center gap-2">
+            <div className="text-right">
               {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== originalPrice ? (
                 <>
-                  <span className="line-through text-gray-400 text-base">
+                  <div className="line-through text-gray-400 text-sm">
                     {originalPrice !== null && originalPrice !== undefined
                       ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
                       : ''}
-                  </span>
-                  <span className="text-xl font-bold text-purple-700">
+                  </div>
+                  <div className="text-xl font-bold text-purple-700">
                     {parsePrice(displayDiscountedPrice)?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
-                  </span>
+                  </div>
                 </>
               ) : (
-                <span className="text-xl font-bold text-purple-700">
+                <div className="text-xl font-bold text-purple-700">
                   {originalPrice !== null && originalPrice !== undefined
                     ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
                     : ''}
-                </span>
+                </div>
               )}
-            </span>
+            </div>
           </div>
         </div>
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">

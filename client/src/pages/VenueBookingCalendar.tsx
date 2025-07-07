@@ -6,6 +6,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useUserContext } from '../contexts/AuthContext';
 import { fetchAreaBookings, fetchAreaById } from '../services/Booking';
 import { AreaData, BookingData, BookingsByDate } from '../types/BookingClient';
+import { calculateAreaPricing } from '../utils/pricingUtils';
 
 const VenueBookingCalendar = () => {
     const { userDetails } = useUserContext();
@@ -87,17 +88,14 @@ const VenueBookingCalendar = () => {
 
     useEffect(() => {
         if (areaData) {
-            try {
-                const priceString = areaData.price_per_hour || '0';
-                const numericValue = priceString.toString().replace(/[^\d.]/g, '');
-                const venuePrice = parseFloat(numericValue) || 0;
-                setPrice(venuePrice);
-            } catch (error) {
-                console.error(`Error parsing area price: ${error}`);
-                setPrice(0);
-            }
+            const pricingResult = calculateAreaPricing({
+                areaData: areaData,
+                userDetails,
+                hours: 1
+            });
+            setPrice(pricingResult.finalPrice);
         }
-    }, [areaData]);
+    }, [areaData, userDetails]);
 
     const months = [currentMonth, addMonths(currentMonth, 1)];
 
@@ -181,12 +179,7 @@ const VenueBookingCalendar = () => {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const startTime = `${dateStr}`;
             const endTime = `${dateStr}T17:00:00`;
-            let totalPrice: number = price;
-            if (areaData.discount_percent > 0) {
-                const numericValue = areaData.discounted_price?.toString().replace(/[^\d.]/g, '') || '0';
-                totalPrice = parseFloat(numericValue);
-            }
-            navigate(`/confirm-area-booking?areaId=${areaId}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}&totalPrice=${totalPrice}`);
+            navigate(`/confirm-area-booking?areaId=${areaId}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}&totalPrice=${price}`);
         }
     };
 
@@ -423,24 +416,77 @@ const VenueBookingCalendar = () => {
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-xl font-bold">{areaData.area_name}</h3>
                             </div>
-                            {areaData.discount_percent && areaData.discount_percent > 0 ? (
-                                <span>
-                                    <span className="line-through text-gray-400 mr-2">{areaData.price_per_hour}</span>
-                                    <span className="text-blue-600 font-bold">
-                                        ₱{(
-                                            parseFloat(
-                                                areaData.price_per_hour?.toString().replace(/[^\d.]/g, '') || '0'
-                                            ) *
-                                            (1 - areaData.discount_percent / 100)
-                                        ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </span>
-                                    <span className="ml-2 text-green-600 font-semibold">
-                                        -{areaData.discount_percent}% OFF
-                                    </span>
-                                </span>
-                            ) : (
-                                <p className="text-lg font-semibold text-blue-600 mb-3">{areaData.price_per_hour}</p>
-                            )}
+                            {/* Price Display with Discount Logic */}
+                            <div className="mb-3">
+                                {(() => {
+                                    const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
+                                    const parsePrice = (val: string | number | null | undefined) => {
+                                        if (!val) return null;
+                                        if (typeof val === 'number') return val;
+                                        if (typeof val === 'string') {
+                                            return parseFloat(val.replace(/[^\d.]/g, ''));
+                                        }
+                                        return null;
+                                    };
+
+                                    const originalPrice = parsePrice(areaData.price_per_hour) || 0;
+                                    const adminDiscounted = parsePrice(areaData.discounted_price);
+                                    const seniorDiscounted = parsePrice(areaData.senior_discounted_price);
+
+                                    let displayDiscountedPrice: number | null = null;
+                                    let displayDiscountPercent = 0;
+
+                                    if (isSeniorOrPwd) {
+                                        // For senior/PWD users, compare available discounts and pick the best (lowest price)
+                                        const availableDiscounts = [];
+
+                                        if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+                                            availableDiscounts.push({ price: adminDiscounted, percent: areaData.discount_percent ?? 0 });
+                                        }
+
+                                        if (seniorDiscounted !== null && seniorDiscounted < originalPrice) {
+                                            availableDiscounts.push({ price: seniorDiscounted, percent: 20 });
+                                        }
+
+                                        if (availableDiscounts.length > 0) {
+                                            // Pick the discount with the lowest price
+                                            const bestDiscount = availableDiscounts.reduce((best, current) =>
+                                                current.price < best.price ? current : best
+                                            );
+                                            displayDiscountedPrice = bestDiscount.price;
+                                            displayDiscountPercent = bestDiscount.percent;
+                                        }
+                                    } else {
+                                        // For non-senior users, only apply admin discount if available
+                                        if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+                                            displayDiscountedPrice = adminDiscounted;
+                                            displayDiscountPercent = areaData.discount_percent ?? 0;
+                                        }
+                                    }
+
+                                    return (
+                                        <>
+                                            {displayDiscountedPrice !== null ? (
+                                                <>
+                                                    <div className="text-gray-500 line-through text-base">
+                                                        ₱{originalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </div>
+                                                    <div className="text-blue-600 font-bold text-lg">
+                                                        ₱{displayDiscountedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        <span className="ml-2 text-green-600 font-semibold text-sm">
+                                                            -{displayDiscountPercent}% OFF
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-lg font-semibold text-blue-600">
+                                                    ₱{originalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
                             <div className="flex flex-col space-y-2 mb-4 mt-3">
                                 <div className="flex items-center text-gray-800">
                                     <span className="mr-2">👥</span>
@@ -463,13 +509,7 @@ const VenueBookingCalendar = () => {
                                         <div className="flex justify-between text-3xl font-semibold text-blue-600 pt-2 border-t border-gray-200">
                                             <span>Total Price:</span>
                                             <span>
-                                                ₱{areaData.discount_percent && areaData.discount_percent > 0
-                                                    ? (
-                                                        parseFloat(
-                                                            areaData.price_per_hour?.toString().replace(/[^\d.]/g, '') || '0'
-                                                        ) * (1 - areaData.discount_percent / 100)
-                                                    ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                    : price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                ₱{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     </div>

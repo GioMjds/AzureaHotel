@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowLeftIcon, ArrowRightIcon, BookOpen, MapPin, PhilippinePeso, Star, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReviewList from "../components/reviews/ReviewList";
 import { useUserContext } from "../contexts/AuthContext";
@@ -16,7 +16,7 @@ const VenueDetails = () => {
     const [selectedImageIdx, setSelectedImageIdx] = useState<number>(0);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const { id } = useParams<{ id: string }>();
-    const { isAuthenticated } = useUserContext();
+    const { isAuthenticated, userDetails } = useUserContext();
     const navigate = useNavigate();
     const pageSize = 5;
 
@@ -31,10 +31,6 @@ const VenueDetails = () => {
         queryFn: () => fetchAreaReviews(id, currentPage, pageSize),
         enabled: !!id,
     });
-
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [id]);
 
     if (isLoadingVenue) return <RoomAndAreaDetailsSkeleton />;
     if (venueError) return <Error />;
@@ -58,6 +54,59 @@ const VenueDetails = () => {
 
     const reviews = reviewsData?.data || [];
     const totalReviews = reviewsData?.total || 0;
+
+    // Discount logic similar to VenueCard
+    const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
+    const parsePrice = (val: string | number | null | undefined) => {
+        if (!val) return null;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            return parseFloat(val.replace(/[^\d.]/g, ''));
+        }
+        return null;
+    };
+
+    let displayDiscountedPrice = null;
+
+    if (venueDetail) {
+        const adminDiscounted = parsePrice(venueDetail.discounted_price);
+        const seniorDiscounted = parsePrice(venueDetail.senior_discounted_price);
+        const originalPrice = parsePrice(venueDetail.price_per_hour);
+
+        if (isSeniorOrPwd) {
+            // For senior/PWD users, compare available discounts and pick the best (lowest price)
+            const availableDiscounts = [];
+
+            if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+                availableDiscounts.push({
+                    price: adminDiscounted,
+                    percent: venueDetail.discount_percent ?? 0,
+                    originalValue: venueDetail.discounted_price
+                });
+            }
+
+            if (seniorDiscounted !== null && seniorDiscounted < originalPrice) {
+                availableDiscounts.push({
+                    price: seniorDiscounted,
+                    percent: 20,
+                    originalValue: venueDetail.senior_discounted_price
+                });
+            }
+
+            if (availableDiscounts.length > 0) {
+                // Pick the discount with the lowest price
+                const bestDiscount = availableDiscounts.reduce((best, current) =>
+                    current.price < best.price ? current : best
+                );
+                displayDiscountedPrice = bestDiscount.originalValue;
+            }
+        } else {
+            // For non-senior users, only apply count if available
+            if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+                displayDiscountedPrice = venueDetail.discounted_price;
+            }
+        }
+    }
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -155,7 +204,7 @@ const VenueDetails = () => {
                             className="inline-flex cursor-pointer items-center gap-2 mt-2 px-4 py-2 rounded-full bg-indigo-600/80 backdrop-blur-md text-white hover:bg-indigo-700/90 transition-all duration-300 shadow-lg"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            <span>Back to Venues</span>
+                            <span>Back to Areas</span>
                         </motion.button>
                     </motion.div>
 
@@ -219,17 +268,19 @@ const VenueDetails = () => {
                                         </div>
                                         <div>
                                             <h3 className="font-medium text-gray-900">Pricing</h3>
-                                            {venueDetail.discount_percent > 0 ? (
-                                                <>
-                                                    <span className="text-gray-400 line-through mr-2">
+                                            {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== parsePrice(venueDetail.price_per_hour) ? (
+                                                <div className="space-y-1">
+                                                    <div className="text-gray-400 line-through text-sm">
                                                         {venueDetail.price_per_hour}
-                                                    </span>
-                                                    <span className="text-green-600 font-semibold">
-                                                        {venueDetail.discounted_price}
-                                                    </span>
-                                                </>
+                                                    </div>
+                                                    <div className="text-green-600 font-semibold text-lg">
+                                                        {parsePrice(displayDiscountedPrice)?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <span className="text-gray-600">{venueDetail.price_per_hour}</span>
+                                                <div className="text-gray-600 text-lg font-semibold">
+                                                    {venueDetail.price_per_hour}
+                                                </div>
                                             )}
                                         </div>
                                     </div>

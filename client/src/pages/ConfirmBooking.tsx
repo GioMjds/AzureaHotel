@@ -15,6 +15,7 @@ import EventLoader from "../motions/loaders/EventLoader";
 import { createBooking, fetchRoomById } from "../services/Booking";
 import { BookingFormData, ConfirmBookingFormValues, RoomData } from "../types/BookingClient";
 import { formatTime } from "../utils/formatters";
+import { calculateRoomPricing, formatPrice, getDiscountLabel } from "../utils/pricingUtils";
 
 const ConfirmBooking = () => {
   const navigate = useNavigate();
@@ -120,25 +121,16 @@ const ConfirmBooking = () => {
       const end = new Date(selectedDeparture);
       const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
-      let priceValue = 0;
-      const priceString = roomData.price_per_night || roomData.room_price;
-      if (priceString) {
-        const numericValue = priceString.toString().replace(/[^\d.]/g, '') || '0';
-        priceValue = parseFloat(numericValue) || 0;
-        let discountPercent = 0;
-        if (nights >= 7) {
-          discountPercent = 10;
-        } else if (nights >= 3) {
-          discountPercent = 5;
-        }
-        let finalPrice = priceValue * nights;
-        if (discountPercent > 0) {
-          finalPrice = priceValue * nights * (1 - discountPercent / 100);
-        }
-        setCalculatedTotalPrice(Math.round(finalPrice));
-      }
+      // Use shared pricing utility
+      const pricingResult = calculateRoomPricing({
+        roomData,
+        userDetails,
+        nights
+      });
+
+      setCalculatedTotalPrice(Math.round(pricingResult.totalPrice));
     }
-  }, [roomData, selectedArrival, selectedDeparture, priceParam]);
+  }, [roomData, selectedArrival, selectedDeparture, priceParam, userDetails]);
 
   const handleDateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,27 +146,16 @@ const ConfirmBooking = () => {
     if (isSubmitting) return;
     if (paymentMethod === 'gcash' && !gcashProof) return;
 
-    // Always recalculate the correct discounted price before submission
-    let priceValue = 0;
-    let discountPercent = 0;
-    let finalPrice = 0;
-    const priceString = roomData?.price_per_night || roomData?.room_price;
+    // Always recalculate the correct discounted price before submission using shared utility
     const start = new Date(selectedArrival);
     const end = new Date(selectedDeparture);
     const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    if (priceString) {
-      const numericValue = priceString.toString().replace(/[^\d.]/g, '') || '0';
-      priceValue = parseFloat(numericValue) || 0;
-      if (nights >= 7) {
-        discountPercent = 10;
-      } else if (nights >= 3) {
-        discountPercent = 5;
-      }
-      finalPrice = priceValue * nights;
-      if (discountPercent > 0) {
-        finalPrice = priceValue * nights * (1 - discountPercent / 100);
-      }
-    }
+
+    const pricingResult = calculateRoomPricing({
+      roomData: roomData!,
+      userDetails,
+      nights
+    });
 
     const booking: BookingFormData = {
       firstName: data.firstName,
@@ -186,13 +167,10 @@ const ConfirmBooking = () => {
       checkOut: selectedDeparture,
       arrivalTime: data.arrivalTime,
       numberOfGuests: data.numberOfGuests,
-      totalPrice: Math.round(finalPrice),
+      totalPrice: Math.round(pricingResult.totalPrice),
       paymentMethod: "gcash",
       paymentProof: gcashProof
     };
-    // Debug: log booking data before submit
-    console.log('[DEBUG] Submitting booking:', booking);
-
     setPendingFormData(booking);
     setShowConfirmModal(true);
   };
@@ -316,34 +294,20 @@ const ConfirmBooking = () => {
         icon="fa-solid fa-book"
         title="Confirm Your Room Booking"
         description={(() => {
-          // Calculate price and discount for modal
-          let priceValue = 0;
-          let discountPercent = 0;
-          let discountedValue = 0;
-          const priceString = roomData?.price_per_night || roomData?.room_price;
-          try {
-            const numericValue = priceString?.toString().replace(/[^\d.]/g, '') || '0';
-            priceValue = parseFloat(numericValue) || 0;
-            if (nights >= 7) {
-              discountPercent = 10;
-            } else if (nights >= 3) {
-              discountPercent = 5;
-            }
-            discountedValue = priceValue * (1 - discountPercent / 100);
-          } catch {
-            // ignore parse errors
-          }
-          const roomName = roomData?.room_name || "this room";
+          if (!roomData) return "Loading...";
+
+          // Use the shared pricing utility for consistency
+          const pricingResult = calculateRoomPricing({
+            roomData,
+            userDetails,
+            nights
+          });
+
+          const roomName = roomData.room_name || "this room";
           const nightText = `for ${nights} night${nights !== 1 ? 's' : ''}`;
-          if (discountPercent > 0) {
-            return (
-              `You're about to book ${roomName} ${nightText}. The total price is ₱${(discountedValue * nights).toLocaleString(undefined, { maximumFractionDigits: 2 })}. Would you like to proceed?`
-            );
-          } else {
-            return (
-              `You're about to book ${roomName} ${nightText}.\nThe total price is ₱${(priceValue * nights).toLocaleString(undefined, { maximumFractionDigits: 2 })}. Would you like to proceed?`
-            );
-          }
+          const totalAmount = pricingResult.totalPrice;
+
+          return `You're about to book ${roomName} ${nightText}. The total price is ₱${totalAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}. Would you like to proceed?`;
         })()}
         cancel={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmBooking}
@@ -938,61 +902,41 @@ const ConfirmBooking = () => {
                 <p className="font-medium">{roomData?.room_name || "Room"}</p>
                 {/* Discount/Price summary */}
                 {(() => {
-                  let priceValue = 0;
-                  let discountPercent = 0;
-                  let discountedValue = 0;
-                  const priceString = roomData?.price_per_night || roomData?.room_price;
-                  try {
-                    const numericValue = priceString?.toString().replace(/[^\d.]/g, '') || '0';
-                    priceValue = parseFloat(numericValue) || 0;
-                    if (nights >= 7) {
-                      discountPercent = 10;
-                    } else if (nights >= 3) {
-                      discountPercent = 5;
-                    }
-                    discountedValue = priceValue * (1 - discountPercent / 100);
-                  } catch {
-                    // ignore parse errors
-                  }
+                  const pricingResult = calculateRoomPricing({
+                    roomData: roomData!,
+                    userDetails,
+                    nights
+                  });
+
+                  const hasDiscount = pricingResult.discountType !== 'none';
+
                   return (
                     <>
-                      {discountPercent > 0 ? (
+                      {hasDiscount ? (
                         <>
                           <div className="flex justify-between text-gray-500 line-through text-base">
                             <span>Original Price:</span>
-                            <span>₱{(priceValue * nights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            <span>{formatPrice(pricingResult.originalPrice * nights)}</span>
                           </div>
                           <div className="flex justify-between text-green-600 font-semibold text-base">
-                            <span>Long Stay Discount ({discountPercent}%):</span>
-                            <span>-₱{((priceValue * nights) - (discountedValue * nights)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            <span>{getDiscountLabel(pricingResult.discountType, pricingResult.discountPercent)}:</span>
+                            <span>-{formatPrice((pricingResult.originalPrice - pricingResult.finalPrice) * nights)}</span>
                           </div>
                           <div className="flex justify-between text-blue-600 font-bold text-3xl mt-2">
                             <span>Total Price:</span>
-                            <span>₱{(discountedValue * nights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            <span>{formatPrice(pricingResult.totalPrice)}</span>
                           </div>
                         </>
                       ) : (
                         <div className="flex justify-between text-blue-600 font-bold text-xl">
                           <span>Total Price:</span>
-                          <span>₱{(priceValue * nights).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                          <span>{formatPrice(pricingResult.totalPrice)}</span>
                         </div>
                       )}
                     </>
                   );
                 })()}
               </motion.div>
-              {((): any => {
-                let discountPercent = 0;
-                if (nights >= 7) {
-                  discountPercent = 10;
-                } else if (nights >= 3) {
-                  discountPercent = 5;
-                }
-                if (discountPercent === 0) {
-                  return null;
-                }
-                return null;
-              })()}
             </motion.div>
 
             <div className="hidden lg:block">

@@ -50,18 +50,8 @@ const EditAreaModal: FC<IAreaFormModalProps> = ({ onSave, areaData, isOpen, canc
   };
 
   const handleRemoveImage = (idx: number) => {
-    const imageToRemove = images[idx];
-    const isExistingImage = typeof imageToRemove === 'string';
-
     const updatedImages = images.filter((_, i) => i !== idx);
     setValue("images", updatedImages);
-
-    if (isExistingImage) {
-      console.log(`Removing existing image at index: ${idx}: ${imageToRemove}`);
-    } else {
-      console.log(`Removing new image at index: ${idx}`);
-    }
-    console.log(`Remaining images: ${updatedImages.length}`);
   };
 
   const renderImagePreviews = () => {

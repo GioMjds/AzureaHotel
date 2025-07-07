@@ -88,47 +88,57 @@ class BookingSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         user = instance.user if hasattr(instance, 'user') else None
         discount_percent = 0
+        
+        
         # Apply PWD/Senior Discount if user is eligible
         if user and getattr(user, 'is_senior_or_pwd', False):
             discount_percent = PWD_SENIOR_DISCOUNT_PERCENT
+        
         nights = (instance.check_out_date - instance.check_in_date).days if instance.check_in_date and instance.check_out_date else 1
+        
         if instance.room:
             try:
                 price_per_night = float(getattr(instance.room, 'price_per_night', None) or instance.room.room_price)
                 original_total = price_per_night * nights
+                
                 # Apply long stay discount if not PWD/Senior
                 if discount_percent == 0:
                     if nights >= 7:
                         discount_percent = 10
                     elif nights >= 3:
                         discount_percent = 5
+
                 discounted_price = original_total * (1 - discount_percent / 100)
                 representation['original_price'] = original_total
                 representation['discount_percent'] = discount_percent
                 representation['discounted_price'] = round(discounted_price, 2)
                 representation['total_price'] = float(instance.total_price)
+                
+                
                 if hasattr(instance, 'down_payment') and instance.down_payment is not None:
                     representation['down_payment'] = float(instance.down_payment)
-            except Exception:
+            except Exception as e:
                 representation['original_price'] = None
                 representation['discount_percent'] = 0
                 representation['discounted_price'] = None
         elif instance.area:
             try:
                 original_total = float(instance.total_price)
+                
                 discounted_price = original_total * (1 - discount_percent / 100)
                 representation['original_price'] = original_total
                 representation['discount_percent'] = discount_percent
                 representation['discounted_price'] = round(discounted_price, 2)
                 representation['total_price'] = float(instance.total_price)
-            except Exception:
+                
+            except Exception as e:
                 representation['original_price'] = None
                 representation['discount_percent'] = 0
                 representation['discounted_price'] = None
         else:
             representation['original_price'] = None
             representation['discount_percent'] = 0
-            representation['discounted_price'] = None
+            representation['discounted_price'] = None        
         return representation
 
 class BookingRequestSerializer(serializers.Serializer):
@@ -182,11 +192,6 @@ class BookingRequestSerializer(serializers.Serializer):
         payment_proof_file = request.FILES.get('paymentProof')
         payment_method = validated_data.get('paymentMethod', 'physical')
         payment_proof_url = None
-
-        print(f'Backend BookingRequestSerializer.create() called with data: ', {
-            'validated_data': validated_data,
-            'is_venue_booking': validated_data.get('isVenueBooking', False)
-        })
 
         if payment_method == 'gcash':
             try:
@@ -254,16 +259,21 @@ class BookingRequestSerializer(serializers.Serializer):
             try:
                 area_id = validated_data['roomId']
                 area = Areas.objects.get(id=area_id)
+                
                 start_time = None
                 end_time = None
                 if 'startTime' in validated_data and validated_data['startTime']:
                     start_time = datetime.strptime(validated_data['startTime'], "%H:%M").time()
                 if 'endTime' in validated_data and validated_data['endTime']:
                     end_time = datetime.strptime(validated_data['endTime'], "%H:%M").time()
+                
                 # For venue bookings, fallback to frontend value or 0
                 original_price = float(validated_data.get('totalPrice', 0))
-                discounted_price = original_price * (1 - discount_percent / 100)
-                total_price = discounted_price
+                
+                # For venue bookings, the frontend already sends the final discounted price
+                # Don't apply additional discount, just use the provided price
+                total_price = original_price
+
                 booking = Bookings.objects.create(
                     user=user,
                     area=area,
@@ -281,7 +291,9 @@ class BookingRequestSerializer(serializers.Serializer):
                     payment_method=payment_method,
                     payment_proof=payment_proof_url,
                     payment_date=timezone.now() if payment_method == 'gcash' else None,
+                    is_discounted=discount_percent > 0,  # Track if discount was applied
                 )
+                
                 if user.is_verified != 'verified':
                     user.last_booking_date = timezone.now().date()
                     user.save()
@@ -291,14 +303,19 @@ class BookingRequestSerializer(serializers.Serializer):
         else:
             try:
                 room = Rooms.objects.get(id=validated_data['roomId'])
+                
                 price_per_night = float(room.room_price)
+                
                 if discount_percent == 0:
                     if nights >= 7:
                         discount_percent = 10
                     elif nights >= 3:
                         discount_percent = 5
+                
                 discounted_price = price_per_night * (1 - discount_percent / 100)
                 total_price = discounted_price * nights
+                
+                
                 booking = Bookings.objects.create(
                     user=user,
                     room=room,
@@ -316,6 +333,8 @@ class BookingRequestSerializer(serializers.Serializer):
                     payment_proof=payment_proof_url,
                     payment_date=timezone.now() if payment_method == 'gcash' else None,
                 )
+                
+                
                 if user.is_verified != 'verified':
                     user.last_booking_date = timezone.now().date()
                     user.save()

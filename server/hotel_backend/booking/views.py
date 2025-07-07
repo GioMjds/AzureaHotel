@@ -112,6 +112,7 @@ def bookings_list(request):
             }, status=status.HTTP_200_OK)
             
         elif request.method == 'POST':
+
             request_data = request.data.copy()
             if 'payment_proof' in request.FILES:
                 request_data['payment_proof'] = request.FILES['payment_proof']
@@ -135,7 +136,6 @@ def bookings_list(request):
                         "message": "Booking created successfully",
                         "data": booking_data
                     }, status=status.HTTP_201_CREATED)
-                    
                 return Response({
                     "error": serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -273,9 +273,12 @@ def area_reservations(request):
 def area_detail(request, area_id):
     try:
         area = Areas.objects.get(id=area_id)
-        serializer = AreaSerializer(area)
+        
+        serializer = AreaSerializer(area, context={'request': request})
+        serialized_data = serializer.data
+        
         return Response({
-            "data": serializer.data
+            "data": serialized_data
         }, status=status.HTTP_200_OK)
     except Areas.DoesNotExist:
         return Response({"error": "Area not found"}, status=status.HTTP_404_NOT_FOUND)

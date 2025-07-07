@@ -15,21 +15,14 @@ class MultiDBAuthBackend(ModelBackend):
             except User.DoesNotExist:
                 user = None
         if user and user.check_password(password):
-            print("Authenticated with Django user")
             return user
 
         # Try Customer (flask DB)
         try:
             flask_user = Customer.objects.using('flask').get(email=username)
-            print("Found user in flask DB:", flask_user.email)
             if check_password(password, flask_user.password):
                 flask_user.is_flask_customer = True
-                print("Authenticated with flask customer")
                 return flask_user
-            else:
-                print("Password mismatch for flask customer")
         except Customer.DoesNotExist:
-            print("No user found in flask DB")
             return None
-
         return None

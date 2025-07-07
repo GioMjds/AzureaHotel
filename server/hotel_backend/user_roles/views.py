@@ -108,7 +108,6 @@ def create_booking_notification(user, notification_type, booking_id, message):
             
             return notification
         except Exception as e:
-            print(f"Error sending notification via WebSocket: {str(e)}")
             return notification
     except Exception as e:
         return None

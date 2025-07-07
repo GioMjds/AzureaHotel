@@ -23,6 +23,7 @@ export interface Room {
   amenities?: Amenity[];
   discount_percent?: number;
   average_rating?: number;
+  senior_discounted_price?: number | null;
 }
 
 export interface AddRoomResponse {

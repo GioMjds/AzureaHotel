@@ -137,7 +137,6 @@ const ManageRooms = () => {
     let images: string[] = [];
     if (Array.isArray(room.images)) {
       images = room.images.map((img: any) => img.room_image).filter(Boolean);
-      console.log("Loaded room images for editing:", images);
     }
 
     setEditRoomData({

@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, CheckCircle2, Clock, CreditCard, User, Watch, XCircle } from "lucide-react";
 import { FC, ReactNode, memo, useMemo } from "react";
-import { formatTime, formatStatus } from "../../utils/formatters";
 import { BookingCardProps } from "../../types/BookingGuest";
+import { formatCurrency, formatStatus, formatTime } from "../../utils/formatters";
 
 const getStatusInfo = (status: string): { color: string; icon: ReactNode } => {
   const normalizedStatus = status.toLowerCase();
@@ -159,7 +159,7 @@ const BookingCard: FC<BookingCardProps> = memo(({
               </div>
             </div>
             <div className="text-right">
-              <span className="block text-2xl font-bold text-blue-600">{displayPrice.toLocaleString()}</span>
+              <span className="block text-2xl font-bold text-blue-600">{formatCurrency(displayPrice || 0)}</span>
             </div>
           </div>
 
@@ -195,7 +195,7 @@ const BookingCard: FC<BookingCardProps> = memo(({
                 <Watch className="w-5 h-5 text-indigo-600 mr-2 flex-shrink-0" />
                 <div>
                   <span className="block text-md text-gray-500">Down Payment</span>
-                  <span className="block font-semibold">{downPayment}</span>
+                  <span className="block font-semibold">{formatCurrency(downPayment)}</span>
                 </div>
               </div>
             )}

@@ -13,6 +13,7 @@ import { useUserContext } from "../contexts/AuthContext";
 import EventLoader from "../motions/loaders/EventLoader";
 import { createReservation, fetchAreaById } from "../services/Booking";
 import { AreaData, FormData, ReservationFormData } from "../types/BookingClient";
+import { calculateAreaPricing } from "../utils/pricingUtils";
 
 const ConfirmVenueBooking = () => {
   const navigate = useNavigate();
@@ -109,6 +110,18 @@ const ConfirmVenueBooking = () => {
       return;
     }
 
+    let finalPrice = parseFloat(totalPrice);
+
+    if (areaData) {
+      const pricingResult = calculateAreaPricing({
+        areaData: areaData,
+        userDetails,
+        hours: 1
+      });
+
+      finalPrice = pricingResult.finalPrice;
+    }
+
     const reservationData: ReservationFormData = {
       firstName: data.firstName,
       lastName: data.lastName,
@@ -117,7 +130,7 @@ const ConfirmVenueBooking = () => {
       areaId: areaId!,
       startTime: new Date(startTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
-      totalPrice: parseFloat(totalPrice),
+      totalPrice: finalPrice,
       status: "pending",
       isVenueBooking: true,
       numberOfGuests: data.numberOfGuests,

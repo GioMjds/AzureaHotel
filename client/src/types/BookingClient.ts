@@ -106,8 +106,11 @@ export interface AreaData {
   status: string;
   capacity: number;
   price_per_hour: string;
-  discounted_price?: number;
+  price_per_hour_numeric?: number;
+  discounted_price?: number | string;
+  discounted_price_numeric?: number;
   discount_percent?: number;
+  senior_discounted_price?: number;
 }
 
 export interface FormData {
@@ -137,11 +140,13 @@ export interface RoomData {
     room_image: string;
   }[];
   discount_percent?: number;
-  discounted_price?: number;
+  discounted_price?: string;
+  discounted_price_numeric?: number;
+  senior_discounted_price?: number;
   status: string;
   max_guests: number;
   amenities?: Amenity[];
-  price_per_night?: string;
+  price_per_night?: number;
 }
 
 export interface BookingData {

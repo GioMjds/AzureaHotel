@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowLeftIcon, ArrowRightIcon, Bookmark, Check, Home, Info, PhilippinePeso, Star, Users, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReviewList from "../components/reviews/ReviewList";
 import { useUserContext } from "../contexts/AuthContext";
@@ -17,10 +17,10 @@ import Error from "./_ErrorBoundary";
 const RoomDetails = () => {
   const [selectedImageIdx, setSelectedImageIdx] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  
-  const { isAuthenticated } = useUserContext();
+
+  const { isAuthenticated, userDetails } = useUserContext();
   const { id } = useParams<{ id: string }>();
-  
+
   const navigate = useNavigate();
   const pageSize: number = 5;
 
@@ -40,10 +40,6 @@ const RoomDetails = () => {
     queryFn: () => fetchRoomReviews(id as string, currentPage, pageSize),
     enabled: !!id,
   });
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
 
   if (isLoadingRoom) return <RoomAndAreaDetailsSkeleton />;
   if (roomError) return <Error />;
@@ -80,6 +76,51 @@ const RoomDetails = () => {
   };
 
   const reviews = reviewsData?.data || [];
+
+  // Discount logic similar to RoomCard
+  const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
+  const parsePrice = (val: number | string) => {
+    if (!val) return null;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      return parseFloat(val.replace(/[^\d.]/g, ''));
+    }
+    return null;
+  };
+
+  let displayDiscountedPrice: number | null = null;
+
+  if (roomDetail) {
+    const adminDiscounted = parsePrice(roomDetail.discounted_price);
+    const seniorDiscounted = parsePrice(roomDetail.senior_discounted_price);
+    const originalPrice = parsePrice(roomDetail.room_price);
+
+    if (isSeniorOrPwd) {
+      // For senior/PWD users, compare available discounts and pick the best (lowest price)
+      const availableDiscounts = [];
+
+      if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+        availableDiscounts.push({ price: adminDiscounted, percent: roomDetail.discount_percent ?? 0 });
+      }
+
+      if (seniorDiscounted !== null && seniorDiscounted < originalPrice) {
+        availableDiscounts.push({ price: seniorDiscounted, percent: 20 });
+      }
+
+      if (availableDiscounts.length > 0) {
+        // Pick the discount with the lowest price
+        const bestDiscount = availableDiscounts.reduce((best, current) =>
+          current.price < best.price ? current : best
+        );
+        displayDiscountedPrice = bestDiscount.price;
+      }
+    } else {
+      // For non-senior users, only apply admin discount if available
+      if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+        displayDiscountedPrice = adminDiscounted;
+      }
+    }
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -242,17 +283,19 @@ const RoomDetails = () => {
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">Pricing</h3>
-                      {roomDetail.discount_percent > 0 ? (
-                        <>
-                          <span className="text-gray-400 line-through mr-2">
+                      {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== parsePrice(roomDetail.room_price) ? (
+                        <div className="space-y-1">
+                          <div className="text-gray-400 line-through text-sm">
                             {roomDetail.room_price}
-                          </span>
-                          <span className="text-green-600 font-semibold">
-                            {roomDetail.discounted_price}
-                          </span>
-                        </>
+                          </div>
+                          <div className="text-green-600 font-semibold text-lg">
+                            {displayDiscountedPrice?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
+                          </div>
+                        </div>
                       ) : (
-                        <span className="text-gray-600">{roomDetail.room_price}</span>
+                        <div className="text-gray-600 text-lg font-semibold">
+                          {roomDetail.room_price}
+                        </div>
                       )}
                     </div>
                   </div>

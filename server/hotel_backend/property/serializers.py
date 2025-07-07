@@ -60,14 +60,18 @@ class RoomSerializer(serializers.ModelSerializer):
         admin_discount = int(instance.discount_percent or 0)
         senior_discount = 20 if user and getattr(user, 'is_senior_or_pwd', False) else 0
         best_discount = max(admin_discount, senior_discount)
+        
         if instance.room_price is not None:
             representation['room_price'] = f"₱{float(instance.room_price):,.2f}"
+            representation['price_per_night'] = float(instance.room_price)  # Add numeric field for frontend calculations
             if best_discount > 0:
                 discounted = float(instance.room_price) * (100 - best_discount) / 100
                 representation['discounted_price'] = f"₱{discounted:,.2f}"
+                representation['discounted_price_numeric'] = discounted  # Add numeric field
                 representation['discount_percent'] = best_discount
             else:
                 representation['discounted_price'] = None
+                representation['discounted_price_numeric'] = None
                 representation['discount_percent'] = 0
         return representation
 
@@ -82,7 +86,7 @@ class RoomSerializer(serializers.ModelSerializer):
             return None
         if discount_percent > 0:
             discounted = room_price * (100 - discount_percent) / 100
-            return f"₱{discounted:,.2f}"
+            return discounted  # Return numeric value instead of formatted string
         return None
     
     def get_senior_discounted_price(self, obj):
@@ -90,7 +94,7 @@ class RoomSerializer(serializers.ModelSerializer):
             price = float(obj.room_price)
             senior_discount = 20
             discounted = price * (100 - senior_discount) / 100
-            return f"₱{discounted:,.2f}"
+            return discounted  # Return numeric value instead of formatted string
         except Exception:
             return None
 
@@ -123,14 +127,18 @@ class AreaSerializer(serializers.ModelSerializer):
         admin_discount = int(instance.discount_percent or 0)
         senior_discount = 20 if user and getattr(user, 'is_senior_or_pwd', False) else 0
         best_discount = max(admin_discount, senior_discount)
+        
         if instance.price_per_hour is not None:
             representation['price_per_hour'] = f"₱{float(instance.price_per_hour):,.2f}"
+            representation['price_per_hour_numeric'] = float(instance.price_per_hour)  # Add numeric field
             if best_discount > 0:
                 discounted = float(instance.price_per_hour) * (100 - best_discount) / 100
                 representation['discounted_price'] = f"₱{discounted:,.2f}"
+                representation['discounted_price_numeric'] = discounted  # Add numeric field
                 representation['discount_percent'] = best_discount
             else:
                 representation['discounted_price'] = None
+                representation['discounted_price_numeric'] = None
                 representation['discount_percent'] = 0
         return representation
 
@@ -145,7 +153,7 @@ class AreaSerializer(serializers.ModelSerializer):
             return None
         if discount_percent > 0:
             discounted = price_per_hour * (100 - discount_percent) / 100
-            return f"₱{discounted:,.2f}"
+            return discounted  # Return numeric value instead of formatted string
         return None
 
     def get_senior_discounted_price(self, obj):
@@ -153,6 +161,6 @@ class AreaSerializer(serializers.ModelSerializer):
             price = float(obj.price_per_hour)
             senior_discount = 20
             discounted = price * (100 - senior_discount) / 100
-            return f"₱{discounted:,.2f}"
+            return discounted  # Return numeric value instead of formatted string
         except Exception:
             return None

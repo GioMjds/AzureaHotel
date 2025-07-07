@@ -57,7 +57,7 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
       displayDiscountPercent = bestDiscount.percent;
     }
   } else {
-    // For non-senior users, only apply admin discount if available
+    // For non-senior users, only apply count if available
     if (adminDiscounted !== null && adminDiscounted < originalPrice) {
       displayDiscountedPrice = discounted_price;
       displayDiscountPercent = discount_percent ?? 0;
@@ -75,8 +75,8 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
   };
 
   const truncatedDescription =
-    description && description.length > 65
-      ? `${description.substring(0, 65)}...`
+    description && description.length > 85
+      ? `${description.substring(0, 85)}...`
       : description || "No description available.";
 
   const buttonClass = isAuthenticated
@@ -129,26 +129,26 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
             <h1 className="text-xl font-bold text-gray-800 group-hover:text-purple-700 transition-colors">
               {title}
             </h1>
-            <span className="text-lg font-semibold text-purple-600 flex flex-row items-center gap-2">
+            <div className="text-right">
               {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== originalPrice ? (
                 <>
-                  <span className="line-through text-gray-400 text-base">
+                  <div className="line-through text-gray-400 text-sm">
                     {originalPrice !== null && originalPrice !== undefined
                       ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
                       : ''}
-                  </span>
-                  <span className="text-xl font-bold text-purple-700">
+                  </div>
+                  <div className="text-xl font-bold text-purple-700">
                     {parsePrice(displayDiscountedPrice)?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
-                  </span>
+                  </div>
                 </>
               ) : (
-                <span className="text-xl font-bold text-purple-700">
+                <div className="text-xl font-bold text-purple-700">
                   {originalPrice !== null && originalPrice !== undefined
                     ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
                     : ''}
-                </span>
+                </div>
               )}
-            </span>
+            </div>
           </div>
         </div>
 

@@ -111,19 +111,8 @@ const EditRoomModal: FC<IRoomFormModalProps> = ({ isOpen, cancel, onSave, roomDa
     };
 
     const handleRemoveImage = (idx: number) => {
-        const imageToRemove = images[idx];
-        const isExistingImage = typeof imageToRemove === 'string';
-
-        // Create a new array without the image at the specified index
         const updatedImages = images.filter((_, i) => i !== idx);
         setValue("images", updatedImages);
-
-        if (isExistingImage) {
-            console.log(`Removed existing image at index ${idx}: ${imageToRemove}`);
-        } else {
-            console.log(`Removed new image at index ${idx}`);
-        }
-        console.log(`Remaining images: ${updatedImages.length}`);
     };
 
     const onSubmit = async (data: IRoom) => {

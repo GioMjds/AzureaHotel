@@ -288,7 +288,6 @@ def send_checkout_e_receipt(email, booking_details):
         
         return True
     except Exception as e:
-        print(f"Error sending checkout receipt: {e}")
         return False
 
 def send_checkout_e_receipt(email, booking_details):
@@ -383,5 +382,4 @@ def send_checkout_e_receipt(email, booking_details):
         
         return True
     except Exception as e:
-        print(f"Error sending checkout receipt: {e}")
         return False

@@ -45,7 +45,6 @@ const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData, load
     }
 
     const handleApprove = () => {
-        console.log('[EditUserModal] Approve clicked. isSeniorOrPwd:', isSeniorOrPwd);
         approveMutation.mutate();
     };
 

@@ -146,7 +146,6 @@ const ManageAreas = () => {
     let images: string[] = [];
     if (Array.isArray(area.images)) {
       images = area.images.map((img: any) => img.area_image).filter(Boolean);
-      console.log(`Loaded area images for editing: ${images}`)
     }
 
     setEditAreaData({
@@ -244,11 +243,10 @@ const ManageAreas = () => {
         {/* Areas Grid or Empty State */}
         {areas.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {areas.map((area, index) => (
+            {areas.map((area) => (
               <AreaCard
                 key={area.id}
                 area={area}
-                index={index}
                 onView={handleViewArea}
                 onEdit={handleEditArea}
                 onDelete={handleDeleteArea}

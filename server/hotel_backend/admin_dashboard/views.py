@@ -232,8 +232,6 @@ def fetch_rooms(request):
 def add_new_room(request):
     try:
         data = request.data.copy()
-        print(f"Received data for new room: {data}")
-        print(f"Received files: {request.FILES}")
 
         if 'room_price' in data and isinstance(data['room_price'], str):
             try:
@@ -268,11 +266,9 @@ def add_new_room(request):
 
             # Always use getlist for images
             images = request.FILES.getlist('images')
-            print(f"Images received for saving: {images}")
             for img in images:
                 image_obj = RoomImages.objects.create(room=instance, room_image=img)
-                print(f"Saved image: {image_obj.room_image.url if image_obj.room_image else 'No URL'}")
-
+            
             data = RoomSerializer(instance).data
             return Response({
                 "message": "Room added successfully",
@@ -302,8 +298,6 @@ def show_room_details(request, room_id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def edit_room(request, room_id):
-    print(f'edit_room Data: {request.data}')
-    print(f'edit_room FILES: {request.FILES}')
     try:
         room = Rooms.objects.get(id=room_id)
     except Rooms.DoesNotExist:
@@ -452,9 +446,7 @@ def fetch_areas(request):
 def add_new_area(request):
     try:
         data = request.data.copy()
-        print(f"Received data for new area: {data}")
-        print(f"Recieved files: {request.FILES}")
-        
+                
         if 'price_per_hour' in data and isinstance(data['price_per_hour'], str):
             try:
                 price_str = data['price_per_hour'].replace('₱', '').replace(',', '')
@@ -475,11 +467,9 @@ def add_new_area(request):
             instance = serializer.save()
             
             images = request.FILES.getlist('images')
-            print(f"Images recieved for saving: {images}")
             
             for img in images:
                 image_obj = AreaImages.objects.create(area=instance, area_image=img)
-                print(f"Saved image: {image_obj.area_image.url if image_obj.area_image else 'No URL'}")
             
             data = AreaSerializer(instance).data
             
@@ -488,7 +478,6 @@ def add_new_area(request):
                 "data": data
             }, status=status.HTTP_201_CREATED)
         else:
-            print(f"Area serializer errors: {serializer.errors}")
             return Response({
                 "error": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
@@ -516,8 +505,6 @@ def show_area_details(request, area_id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def edit_area(request, area_id):
-    print(f"edit_area Data: {request.data}")
-    print(f"edit_area FILES: {request.FILES}")
     try:
         area = Areas.objects.get(id=area_id)
     except Areas.DoesNotExist:
@@ -866,7 +853,6 @@ def update_booking_status(request, booking_id):
                 notification_message = f"Your booking for {property_name} has been cancelled."
             
             if notification_message:
-                print(f"Creating notification for user {booking.user.id}: {notification_message}")
                 create_booking_notification(
                     user=booking.user,
                     notification_type=f"booking_{status_value}",

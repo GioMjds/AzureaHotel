@@ -16,7 +16,7 @@ import GuestBookingsSkeleton from "../../motions/skeletons/GuestBookingsSkeleton
 import { cancelBooking, fetchUserReviews } from "../../services/Booking";
 import { fetchGuestBookings } from "../../services/Guest";
 import { BookingResponse } from "../../types/BookingClient";
-import { formatDate, formatStatus, getStatusColor, formatCurrency } from "../../utils/formatters";
+import { formatCurrency, formatDate, formatStatus, getStatusColor, parsePriceValue } from "../../utils/formatters";
 
 const GuestBookings = () => {
   const { userDetails } = useUserContext();
@@ -238,7 +238,7 @@ const GuestBookings = () => {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -267,9 +267,7 @@ const GuestBookings = () => {
                       }
 
                       const venuePrice =
-                        parseFloat((booking.price_per_hour || booking.area_details?.price_per_hour || "0")
-                          .toString()
-                          .replace(/[^0-9.]/g, '')) || 0;
+                        parsePriceValue(booking.price_per_hour || booking.area_details?.price_per_hour || "0");
 
                       totalAmount = booking.total_price || booking.total_amount || (venuePrice * duration);
                     } else {
@@ -292,9 +290,7 @@ const GuestBookings = () => {
                       }
 
                       const nightlyRate =
-                        parseFloat((booking.room_price || booking.room_details?.room_price || "0")
-                          .toString()
-                          .replace(/[^0-9.]/g, '')) || 0;
+                        parsePriceValue(booking.room_price || booking.room_details?.room_price || "0");
 
                       totalAmount = booking.total_price || booking.total_amount || (nightlyRate * nights);
                     }
@@ -344,7 +340,7 @@ const GuestBookings = () => {
                         <td className="px-6 py-4 text-center whitespace-nowrap text-lg font-semibold text-gray-900">
                           {formatCurrency(totalAmount)}
                         </td>
-                        <td className="p-2 whitespace-nowrap text-sm font-semibold">
+                        <td className="p-1 whitespace-nowrap text-sm font-semibold">
                           <div className="flex justify-center space-x-2">
                             <div className="relative group">
                               <button
@@ -354,11 +350,11 @@ const GuestBookings = () => {
                                   setShowBookingDetailModal(true);
                                 }}
                               >
-                                <Eye size={24} />
+                                <Eye size={20} />
                               </button>
-                              <span className="absolute -left-1/12 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                              {/* <span className="absolute -left-1/2 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
                                 Show Booking Details
-                              </span>
+                              </span> */}
                             </div>
                             {booking.status.toLowerCase() === 'pending' && (
                               <div className="relative group">
@@ -366,11 +362,11 @@ const GuestBookings = () => {
                                   className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full flex items-center cursor-pointer transition-all duration-300"
                                   onClick={() => openCancelModal(id.toString())}
                                 >
-                                  <XCircle size={24} />
+                                  <XCircle size={20} />
                                 </button>
-                                <span className="absolute -left-1/6 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                                {/* <span className="absolute -left-1/2 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
                                   Cancel Booking
-                                </span>
+                                </span> */}
                               </div>
                             )}
                             {booking.status.toLowerCase() === 'checked_in' && (
@@ -382,10 +378,10 @@ const GuestBookings = () => {
                                     setShowOrderFoodModal(true);
                                   }}
                                 >
-                                  <Utensils size={24} />
-                                  <span className="absolute left-1/8 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                                  <Utensils size={20} />
+                                  {/* <span className="absolute -left-1/2 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
                                     Order Food
-                                  </span>
+                                  </span> */}
                                 </button>
                               </div>
                             )}
@@ -396,10 +392,10 @@ const GuestBookings = () => {
                                   onClick={() => !alreadyReviewed && openReviewModal(booking)}
                                   className={`bg-blue-600 text-white p-2 rounded-full flex items-center transition-all duration-300 ${alreadyReviewed ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'}`}
                                 >
-                                  <MessageSquare size={24} />
-                                  <span className="absolute -left-4/10 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                                  <MessageSquare size={20} />
+                                  {/* <span className="absolute -left-4/10 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
                                     {alreadyReviewed ? "Already Reviewed" : "Leave a Review"}
-                                  </span>
+                                  </span> */}
                                 </button>
                               </div>
                             )}
