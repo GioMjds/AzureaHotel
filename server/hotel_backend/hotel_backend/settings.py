@@ -75,9 +75,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    'http://192.168.1.8:5173',
-    'http://10.0.0.65:5173',
-    'http://10.0.0.34:5000',
     os.getenv('CLIENT_URL'),
 ]
 
@@ -159,17 +156,6 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
     },
-    'flask': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'craveon',
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': 'admin',
-        'HOST': '10.0.0.65',
-        'PORT': os.getenv('DB_PORT', '3306'),
-        'SETTINGS': {
-            'charset': 'utf8mb4',
-        }
-    }
 }
 
 AUTHENTICATION_BACKENDS = [

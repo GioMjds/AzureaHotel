@@ -39,11 +39,12 @@ export interface PaginationData {
 export interface RoomCardProps {
   id: string | number;
   name: string;
-  image: string; // changed from string[] to string
+  image: string;
   images: RoomImage[];
   title: string;
   price: string;
   description: string;
   discounted_price?: number;
   discount_percent?: number;
+  senior_discounted_price?: number;
 }

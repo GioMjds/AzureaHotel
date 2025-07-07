@@ -1,15 +1,7 @@
-// Utility to get image src from base64 or data URL
-function getFoodImageSrc(image: string): string {
-    if (!image) return '';
-    // If already a data URL, return as is
-    if (image.startsWith('data:image/')) return image;
-    // Otherwise, treat as base64 PNG
-    return `data:image/png;base64,${image}`;
-}
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useMemo, useState } from "react";
 import { fetchCraveOnFoods } from "../../services/Food";
 
 interface FoodItem {
@@ -37,21 +29,12 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [showCart, setShowCart] = useState<boolean>(false);
 
-    const { data: foodData, isLoading, isError, error } = useQuery({
+    const { data: foodData, isLoading, isError } = useQuery({
         queryKey: ["craveOnFoods"],
-        queryFn: fetchCraveOnFoods,
-        enabled: isOpen,
+        queryFn: () => fetchCraveOnFoods(),
     });
 
-    useEffect(() => {
-        console.log('[OrderFoodModal] foodData:', foodData);
-        if (isError) {
-            console.error('[OrderFoodModal] Error fetching food data:', error);
-        }
-    }, [foodData, isError, error]);
-
     const activeItems: FoodItem[] = useMemo(() => {
-        console.log('[OrderFoodModal] Calculating activeItems from foodData:', foodData);
         return foodData?.active_items || [];
     }, [foodData]);
 
@@ -235,12 +218,9 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                             >
                                                 <div className="relative">
                                                     <img
-                                                        src={getFoodImageSrc(item.image)}
+                                                        src={`data:image/jpeg;base64,${item.image}`}
                                                         alt={item.item_name}
                                                         className="w-full h-40 object-cover"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLImageElement).style.display = 'none';
-                                                        }}
                                                     />
                                                     <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
                                                         {item.category_name}

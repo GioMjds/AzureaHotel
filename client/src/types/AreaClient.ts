@@ -26,6 +26,7 @@ export interface AreaCardProps {
     description: string;
     discounted_price?: number;
     discount_percent?: number;
+    senior_discounted_price?: number;
 }
 
 export interface AreasResponse {

@@ -1,13 +1,13 @@
-import { Book, Eye } from "lucide-react";
+import { Book } from "lucide-react";
 import { FC, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserContext } from "../../contexts/AuthContext";
 import { MemoizedImage } from "../../memo/MemoizedImage";
 import { RoomCardProps } from "../../types/RoomClient";
 
-const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, description, discount_percent, discounted_price }) => {
+const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, description, discount_percent, discounted_price, senior_discounted_price }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useUserContext();
+  const { isAuthenticated, userDetails } = useUserContext();
 
   const displayImage = useMemo(() => {
     if (Array.isArray(images) && images.length > 0) {
@@ -17,6 +17,49 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
     }
     return image;
   }, [images, image]);
+
+  const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
+  const parsePrice = (val: number | string) => {
+    if (!val) return null;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      return parseFloat(val.replace(/[^\d.]/g, ''));
+    }
+    return null;
+  };
+  const adminDiscounted = parsePrice(discounted_price);
+  const seniorDiscounted = parsePrice(senior_discounted_price);
+  const originalPrice = parsePrice(price);
+
+  let displayDiscountedPrice = null;
+  let displayDiscountPercent = 0;
+
+  if (isSeniorOrPwd) {
+    if (adminDiscounted !== null && seniorDiscounted !== null) {
+      if (adminDiscounted < seniorDiscounted) {
+        displayDiscountedPrice = discounted_price;
+        displayDiscountPercent = discount_percent;
+      } else {
+        displayDiscountedPrice = senior_discounted_price;
+        displayDiscountPercent = 20;
+      }
+    } else if (adminDiscounted !== null) {
+      displayDiscountedPrice = discounted_price;
+      displayDiscountPercent = discount_percent;
+    } else if (seniorDiscounted !== null) {
+      displayDiscountedPrice = senior_discounted_price;
+      displayDiscountPercent = 20;
+    } else {
+      displayDiscountedPrice = null;
+      displayDiscountPercent = 0;
+    }
+  } else if (adminDiscounted !== null) {
+    displayDiscountedPrice = discounted_price;
+    displayDiscountPercent = discount_percent;
+  } else {
+    displayDiscountedPrice = null;
+    displayDiscountPercent = 0;
+  }
 
   const handleReserveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,30 +82,18 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
       onClick={() => navigate(`/rooms/${id}`)}
     >
       {/* Discount badge top-right */}
-      {discount_percent > 0 && (
+      {displayDiscountPercent > 0 && (
         <span className="absolute top-3 right-3 z-20 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-bounce">
-          -{discount_percent}% OFF
+          -{displayDiscountPercent}% OFF
         </span>
       )}
-      {/* Image container with elegant overlay */}
+      {/* Image container */}
       <div className="relative w-full h-48 overflow-hidden group">
         <MemoizedImage
           src={displayImage}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-
-        {/* Subtle interactive overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/60 via-blue-800/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-          {/* Simple "View Details" text that slides up */}
-          <div className="transform translate-y-5 group-hover:translate-y-0 transition-transform duration-300 flex flex-col items-center">
-            <div className="flex items-center gap-2 text-white font-medium">
-              <Eye className="w-5 h-5 text-violet-200" />
-              <span className="text-lg text-white">View Details</span>
-            </div>
-            <div className="w-8 h-0.5 bg-blue-300 mt-2 rounded-full"></div>
-          </div>
-        </div>
       </div>
       {/* Card content with subtle animation */}
       <div className="flex flex-col flex-1 p-5 transition-all duration-300 group-hover:bg-gray-50">
@@ -72,22 +103,30 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
               {name}
             </h1>
             <span className="text-lg font-semibold text-purple-600 flex flex-row items-center gap-2">
-              {discount_percent > 0 ? (
+              {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== originalPrice ? (
                 <>
-                  <span className="line-through text-gray-400 text-base">{price}</span>
-                  <span className="text-xl font-bold text-purple-700">{discounted_price}</span>
+                  <span className="line-through text-gray-400 text-base">
+                    {originalPrice !== null && originalPrice !== undefined
+                      ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
+                      : ''}
+                  </span>
+                  <span className="text-xl font-bold text-purple-700">
+                    {parsePrice(displayDiscountedPrice)?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
+                  </span>
                 </>
               ) : (
-                <span className="text-xl font-bold text-purple-700">{price}</span>
+                <span className="text-xl font-bold text-purple-700">
+                  {originalPrice !== null && originalPrice !== undefined
+                    ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
+                    : ''}
+                </span>
               )}
             </span>
           </div>
         </div>
-
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
           {truncatedDescription}
         </p>
-
         <div className="mt-auto w-full pt-4 border-t border-gray-100 group-hover:border-purple-200 transition-colors">
           <button
             className={`${buttonClass} w-full text-center text-white text-sm px-4 py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden`}
@@ -95,10 +134,7 @@ const RoomCard: FC<RoomCardProps> = ({ id, name, image, images, title, price, de
             title={isAuthenticated ? "Book this room" : "Login required to book"}
             disabled={!isAuthenticated}
           >
-            {/* Animated background layer */}
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-            {/* Button content */}
             <Book size={18} className="shrink-0" />
             <span className="font-semibold tracking-wide uppercase">Book Now</span>
           </button>

@@ -1,9 +1,3 @@
-// Helper for formatting currency with place value
-const formatCurrency = (amount: number | string | undefined) => {
-  if (amount === undefined || amount === null) return '';
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return num.toLocaleString('en-PH', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -22,7 +16,7 @@ import GuestBookingsSkeleton from "../../motions/skeletons/GuestBookingsSkeleton
 import { cancelBooking, fetchUserReviews } from "../../services/Booking";
 import { fetchGuestBookings } from "../../services/Guest";
 import { BookingResponse } from "../../types/BookingClient";
-import { formatDate, formatStatus, getStatusColor } from "../../utils/formatters";
+import { formatDate, formatStatus, getStatusColor, formatCurrency } from "../../utils/formatters";
 
 const GuestBookings = () => {
   const { userDetails } = useUserContext();
@@ -348,7 +342,7 @@ const GuestBookings = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap text-lg font-semibold text-gray-900">
-                          ₱{formatCurrency(totalAmount)}
+                          {formatCurrency(totalAmount)}
                         </td>
                         <td className="p-2 whitespace-nowrap text-sm font-semibold">
                           <div className="flex justify-center space-x-2">

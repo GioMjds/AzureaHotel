@@ -3,12 +3,12 @@ import { FC, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserContext } from "../../contexts/AuthContext";
 import { useBookingLimit } from "../../contexts/BookingLimitContext";
-import { AreaCardProps } from "../../types/AreaClient";
 import { MemoizedImage } from "../../memo/MemoizedImage";
+import { AreaCardProps } from "../../types/AreaClient";
 
-const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, description, discount_percent, discounted_price }) => {
+const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, description, discount_percent, discounted_price, senior_discounted_price }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useUserContext();
+  const { isAuthenticated, userDetails } = useUserContext();
   const { canBook, maxLimit } = useBookingLimit();
 
   const displayImage = useMemo(() => {
@@ -19,6 +19,49 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
     }
     return image;
   }, [images, image]);
+
+  const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
+  const parsePrice = (val: string | number | null | undefined) => {
+    if (!val) return null;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      return parseFloat(val.replace(/[^\d.]/g, ''));
+    }
+    return null;
+  };
+  const adminDiscounted = parsePrice(discounted_price);
+  const seniorDiscounted = parsePrice(senior_discounted_price);
+  const originalPrice = parsePrice(priceRange);
+
+  let displayDiscountedPrice = null;
+  let displayDiscountPercent = 0;
+
+  if (isSeniorOrPwd) {
+    if (adminDiscounted !== null && seniorDiscounted !== null) {
+      if (adminDiscounted < seniorDiscounted) {
+        displayDiscountedPrice = discounted_price;
+        displayDiscountPercent = discount_percent;
+      } else {
+        displayDiscountedPrice = senior_discounted_price;
+        displayDiscountPercent = 20;
+      }
+    } else if (adminDiscounted !== null) {
+      displayDiscountedPrice = discounted_price;
+      displayDiscountPercent = discount_percent;
+    } else if (seniorDiscounted !== null) {
+      displayDiscountedPrice = senior_discounted_price;
+      displayDiscountPercent = 20;
+    } else {
+      displayDiscountedPrice = null;
+      displayDiscountPercent = 0;
+    }
+  } else if (adminDiscounted !== null) {
+    displayDiscountedPrice = discounted_price;
+    displayDiscountPercent = discount_percent;
+  } else {
+    displayDiscountedPrice = null;
+    displayDiscountPercent = 0;
+  }
 
   const handleBookNow = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -53,9 +96,9 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
       onClick={() => navigate(`/areas/${id}`)}
     >
       {/* Discount badge top-right */}
-      {discount_percent > 0 && (
+      {displayDiscountPercent > 0 && (
         <span className="absolute top-3 right-3 z-20 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-bounce">
-          -{discount_percent}% OFF
+          -{displayDiscountPercent}% OFF
         </span>
       )}
       {/* Image container with elegant overlay */}
@@ -68,7 +111,6 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
 
         {/* Subtle interactive overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-violet-900/60 via-blue-800/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-          {/* Simple "View Details" text that slides up */}
           <div className="transform translate-y-5 group-hover:translate-y-0 transition-transform duration-300 flex flex-col items-center">
             <div className="flex items-center gap-2 text-white font-medium">
               <Eye className="w-5 h-5 text-violet-200" />
@@ -87,13 +129,23 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
               {title}
             </h1>
             <span className="text-lg font-semibold text-purple-600 flex flex-row items-center gap-2">
-              {discount_percent > 0 ? (
+              {displayDiscountedPrice && parsePrice(displayDiscountedPrice) !== originalPrice ? (
                 <>
-                  <span className="line-through text-gray-400 text-base">{priceRange}</span>
-                  <span className="text-xl font-bold text-purple-700">{discounted_price}</span>
+                  <span className="line-through text-gray-400 text-base">
+                    {originalPrice !== null && originalPrice !== undefined
+                      ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
+                      : ''}
+                  </span>
+                  <span className="text-xl font-bold text-purple-700">
+                    {parsePrice(displayDiscountedPrice)?.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}
+                  </span>
                 </>
               ) : (
-                <span className="text-xl font-bold text-purple-700">{priceRange}</span>
+                <span className="text-xl font-bold text-purple-700">
+                  {originalPrice !== null && originalPrice !== undefined
+                    ? originalPrice.toLocaleString("en-PH", { style: "currency", currency: "PHP" })
+                    : ''}
+                </span>
               )}
             </span>
           </div>

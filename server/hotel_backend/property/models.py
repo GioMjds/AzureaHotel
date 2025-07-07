@@ -53,16 +53,6 @@ class RoomImages(models.Model):
     room = models.ForeignKey(Rooms, related_name='images', on_delete=models.CASCADE)
     room_image = CloudinaryField('room_image', null=True, blank=True)
     
-    def __str__(self):
-        return f"Room image {self.id} for {self.room.room_name}"
-    
-    def get_filename(self):
-        """Get the filename part of the image URL"""
-        if not self.room_image:
-            return ""
-        url = self.room_image.url if hasattr(self.room_image, 'url') else str(self.room_image)
-        return url.split('/')[-1].split('?')[0] if '/' in url else url
-    
     class Meta:
         db_table = 'room_images'
 

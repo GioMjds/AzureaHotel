@@ -1,16 +1,16 @@
-import cloudinary.uploader
 from rest_framework import serializers
 from .models import Bookings, Transactions, Reviews
 from user_roles.models import CustomUsers
 from user_roles.serializers import CustomUserSerializer
 from property.models import Rooms, Areas
-import cloudinary
 from property.serializers import AreaSerializer, RoomSerializer
 from .validations.booking import validate_booking_request
 from django.utils import timezone
 from datetime import datetime
 from django.db.models import Sum
 from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
+import cloudinary.uploader
+import cloudinary
 import uuid
 
 PWD_SENIOR_DISCOUNT_PERCENT = 20
@@ -292,7 +292,6 @@ class BookingRequestSerializer(serializers.Serializer):
             try:
                 room = Rooms.objects.get(id=validated_data['roomId'])
                 price_per_night = float(room.room_price)
-                # If not PWD/Senior, apply long stay discount
                 if discount_percent == 0:
                     if nights >= 7:
                         discount_percent = 10
