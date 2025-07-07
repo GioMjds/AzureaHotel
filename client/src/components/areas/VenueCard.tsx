@@ -37,30 +37,31 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
   let displayDiscountPercent = 0;
 
   if (isSeniorOrPwd) {
-    if (adminDiscounted !== null && seniorDiscounted !== null) {
-      if (adminDiscounted < seniorDiscounted) {
-        displayDiscountedPrice = discounted_price;
-        displayDiscountPercent = discount_percent;
-      } else {
-        displayDiscountedPrice = senior_discounted_price;
-        displayDiscountPercent = 20;
-      }
-    } else if (adminDiscounted !== null) {
-      displayDiscountedPrice = discounted_price;
-      displayDiscountPercent = discount_percent;
-    } else if (seniorDiscounted !== null) {
-      displayDiscountedPrice = senior_discounted_price;
-      displayDiscountPercent = 20;
-    } else {
-      displayDiscountedPrice = null;
-      displayDiscountPercent = 0;
+    // For senior/PWD users, compare available discounts and pick the best (lowest price)
+    const availableDiscounts = [];
+
+    if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+      availableDiscounts.push({ price: adminDiscounted, percent: discount_percent ?? 0, originalValue: discounted_price });
     }
-  } else if (adminDiscounted !== null) {
-    displayDiscountedPrice = discounted_price;
-    displayDiscountPercent = discount_percent;
+
+    if (seniorDiscounted !== null && seniorDiscounted < originalPrice) {
+      availableDiscounts.push({ price: seniorDiscounted, percent: 20, originalValue: senior_discounted_price });
+    }
+
+    if (availableDiscounts.length > 0) {
+      // Pick the discount with the lowest price
+      const bestDiscount = availableDiscounts.reduce((best, current) =>
+        current.price < best.price ? current : best
+      );
+      displayDiscountedPrice = bestDiscount.originalValue;
+      displayDiscountPercent = bestDiscount.percent;
+    }
   } else {
-    displayDiscountedPrice = null;
-    displayDiscountPercent = 0;
+    // For non-senior users, only apply admin discount if available
+    if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+      displayDiscountedPrice = discounted_price;
+      displayDiscountPercent = discount_percent ?? 0;
+    }
   }
 
   const handleBookNow = (e: React.MouseEvent) => {

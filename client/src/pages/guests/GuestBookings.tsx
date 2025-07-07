@@ -474,22 +474,25 @@ const GuestBookings = () => {
                 No Bookings Found
               </motion.h3>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-gray-500 max-w-md mb-6"
-              >
-                {searchTerm || filterStatus ? (
-                  <h1>
-                    We couldn't find any bookings matching your search criteria. Try adjusting your filters or search terms.
-                  </h1>
-                ) : (
-                  <h1>
-                    You don't have any bookings yet. When you make a reservation, it will appear here.
-                  </h1>
-                )}
-              </motion.p>
+              {searchTerm || filterStatus ? (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 max-w-md mb-6"
+                >
+                  We couldn't find any bookings matching your search criteria. Try adjusting your filters or search terms.
+                </motion.p>
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 max-w-md mb-6"
+                >
+                  You don't have any bookings yet. When you make a reservation, it will appear here.
+                </motion.p>
+              )}
 
               {(searchTerm || filterStatus) && (
                 <motion.div

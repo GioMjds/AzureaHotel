@@ -26,22 +26,58 @@ const RoomList: FC = () => {
       .filter((room: any) => room.status === 'available')
       .map((room: any) => {
         const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
-        // Prefer senior_discounted_price if present and user is eligible
+
+        const parsePrice = (val: string | number | null | undefined) => {
+          if (!val) return null;
+          if (typeof val === 'number') return val;
+          if (typeof val === 'string') {
+            return parseFloat(val.replace(/[^\d.]/g, ''));
+          }
+          return null;
+        };
+
+        const originalPrice = parsePrice(room.room_price);
+        const adminDiscounted = parsePrice(room.discounted_price);
+        const seniorDiscounted = parsePrice(room.senior_discounted_price);
+
         let finalDiscountedPrice = null;
         let finalDiscountPercent = 0;
-        const seniorDiscountedPrice = room.senior_discounted_price;
+
         if (isSeniorOrPwd) {
-          if (room.senior_discounted_price) {
-            finalDiscountedPrice = room.senior_discounted_price;
-            finalDiscountPercent = 20;
-          } else if (room.discounted_price && room.discount_percent > 0) {
-            finalDiscountedPrice = room.discounted_price;
-            finalDiscountPercent = room.discount_percent;
+          // For senior/PWD users, find the best available discount
+          const availableDiscounts = [];
+
+          if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+            availableDiscounts.push({
+              price: adminDiscounted,
+              percent: room.discount_percent ?? 0,
+              originalValue: room.discounted_price
+            });
           }
-        } else if (room.discounted_price && room.discount_percent > 0) {
-          finalDiscountedPrice = room.discounted_price;
-          finalDiscountPercent = room.discount_percent;
+
+          if (seniorDiscounted !== null && seniorDiscounted < originalPrice) {
+            availableDiscounts.push({
+              price: seniorDiscounted,
+              percent: 20,
+              originalValue: room.senior_discounted_price
+            });
+          }
+
+          if (availableDiscounts.length > 0) {
+            const bestDiscount = availableDiscounts.reduce((best, current) =>
+              current.price < best.price ? current : best
+            );
+            finalDiscountedPrice = bestDiscount.originalValue;
+            finalDiscountPercent = bestDiscount.percent;
+          }
+        } else {
+          // For non-senior users, only apply admin discount if available
+          if (adminDiscounted !== null && adminDiscounted < originalPrice) {
+            finalDiscountedPrice = room.discounted_price;
+            finalDiscountPercent = room.discount_percent ?? 0;
+          }
         }
+
         return {
           id: room.id,
           name: room.room_name,
@@ -55,7 +91,7 @@ const RoomList: FC = () => {
           discounted_price: finalDiscountedPrice,
           amenities: room.amenities,
           discount_percent: finalDiscountPercent,
-          senior_discounted_price: seniorDiscountedPrice,
+          senior_discounted_price: room.senior_discounted_price,
         };
       });
   }, [data?.data, userDetails]);

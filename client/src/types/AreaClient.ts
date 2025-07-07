@@ -15,6 +15,7 @@ export interface Area {
     status?: "available" | "maintenance";
     average_rating?: number;
     discount_percent?: number;
+    senior_discounted_price?: number | null;
 }
 
 export interface AreaCardProps {
