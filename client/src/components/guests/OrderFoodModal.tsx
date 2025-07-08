@@ -128,7 +128,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                     {/* Header */}
                     <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 relative">
                         <button
-                            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+                            className="absolute top-3 right-3 text-white hover:text-gray-200 transition-colors"
                             onClick={onClose}
                         >
                             <X size={24} />
@@ -147,7 +147,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                     <motion.span
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="absolute -top-2 -right-2 bg-yellow-400 text-orange-600 rounded-full text-xs font-bold w-6 h-6 flex items-center justify-center"
+                                        className="absolute -top-3 -right-3 bg-yellow-400 text-orange-600 rounded-full text-xs font-bold w-6 h-6 flex items-center justify-center"
                                     >
                                         {getTotalItems()}
                                     </motion.span>

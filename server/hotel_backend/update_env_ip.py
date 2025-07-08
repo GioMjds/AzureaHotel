@@ -34,6 +34,7 @@ def main():
     server_replacements = {
         'CLIENT_URL': f'http://{ip}:5173',
         'REDIRECT_URI': f'http://{ip}:5173',
+        'DB_HOST': ip,
     }
     update_env_file(server_env, server_replacements)
     print(f"Updated {server_env} with IP {ip}")

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Bookings, Transactions, Reviews
+from .models import Bookings, Transactions, Reviews, CraveOnUser, CraveOnCategory, CraveOnItem
 from user_roles.models import CustomUsers
 from user_roles.serializers import CustomUserSerializer
 from property.models import Rooms, Areas
@@ -12,8 +12,48 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
 import cloudinary.uploader
 import cloudinary
 import uuid
+import base64
 
 PWD_SENIOR_DISCOUNT_PERCENT = 20
+
+# CraveOn Serializers
+class CraveOnUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CraveOnUser
+        fields = [
+            'user_id', 'first_name', 'middle_name', 'last_name', 
+            'email', 'contact', 'address', 'status', 'is_archived', 
+            'user_img', 'full_name'
+        ]
+    
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.middle_name or ''} {obj.last_name}".strip()
+
+class CraveOnCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CraveOnCategory
+        fields = ['category_id', 'category_name', 'is_archived']
+
+class CraveOnItemSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.category_name', read_only=True)
+    image_data = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CraveOnItem
+        fields = [
+            'item_id', 'item_name', 'price', 'category_id', 
+            'category_name', 'is_archived', 'image_data'
+        ]
+    
+    def get_image_data(self, obj):
+        if obj.image:
+            try:
+                return base64.b64encode(obj.image).decode('utf-8')
+            except:
+                return None
+        return None
 
 class BookingSerializer(serializers.ModelSerializer):
     user = CustomUserSerializer()

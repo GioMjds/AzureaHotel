@@ -103,7 +103,7 @@ const BookingCard: FC<BookingCardProps> = memo(({
   totalPrice,
   numberOfGuests,
   arrivalTime,
-  downPayment
+  downPayment,
 }) => {
   const statusInfo = useMemo(() => getStatusInfo(status), [status]);
   const displayPrice = totalPrice || price;

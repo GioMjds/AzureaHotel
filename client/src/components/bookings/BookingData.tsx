@@ -158,7 +158,7 @@ const BookingData = memo(({ bookingId }: BookingDataProps) => {
         exit={{ opacity: 0 }}
       >
         <div className="w-full">
-          <BookingCard {...formattedBooking} />
+          <BookingCard {...formattedBooking} bookingId={effectiveBookingId} />
         </div>
       </motion.div>
     </AnimatePresence>

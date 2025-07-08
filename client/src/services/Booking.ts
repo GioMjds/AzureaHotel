@@ -1,9 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { BookingFormData, BookingResponse, ReservationFormData } from "../types/BookingClient";
+import {
+  BookingFormData,
+  BookingResponse,
+  ReservationFormData,
+} from "../types/BookingClient";
 import { createBookingFormData } from "../utils/booking";
 import { booking } from "./_axios";
 
-export const fetchBookings = async (page: number, pageSize: number): Promise<{
+export const fetchBookings = async (
+  page: number,
+  pageSize: number
+): Promise<{
   data: BookingResponse[];
   pagination?: {
     total_pages: number;
@@ -25,7 +32,7 @@ export const fetchBookings = async (page: number, pageSize: number): Promise<{
     console.error(`Failed to fetch bookings: ${error}`);
     throw error;
   }
-};    
+};
 
 export const fetchReservations = async () => {
   try {
@@ -45,7 +52,7 @@ export const fetchAvailability = async (arrival: string, departure: string) => {
       params: {
         arrival,
         departure,
-        exclude_statuses: "reserved,checked_in"
+        exclude_statuses: "reserved,checked_in",
       },
       headers: { "Content-Type": "application/json" },
       withCredentials: true,
@@ -53,14 +60,16 @@ export const fetchAvailability = async (arrival: string, departure: string) => {
 
     if (response.data) {
       if (response.data.rooms) {
-        response.data.rooms = response.data.rooms.filter((room: any) =>
-          !(room.status === "reserved" || room.status === "checked_in")
+        response.data.rooms = response.data.rooms.filter(
+          (room: any) =>
+            !(room.status === "reserved" || room.status === "checked_in")
         );
       }
 
       if (response.data.areas) {
-        response.data.areas = response.data.areas.filter((area: any) =>
-          !(area.status === "reserved" || area.status === "checked_in")
+        response.data.areas = response.data.areas.filter(
+          (area: any) =>
+            !(area.status === "reserved" || area.status === "checked_in")
         );
       }
     }
@@ -90,7 +99,9 @@ export const createBooking = async (bookingData: BookingFormData) => {
   }
 };
 
-export const createReservation = async (reservationData: ReservationFormData) => {
+export const createReservation = async (
+  reservationData: ReservationFormData
+) => {
   try {
     const formData = new FormData();
 
@@ -101,14 +112,14 @@ export const createReservation = async (reservationData: ReservationFormData) =>
     formData.append("roomId", reservationData.areaId || "");
     formData.append("isVenueBooking", "true");
     formData.append("status", reservationData.status || "pending");
-    
+
     if (reservationData.startTime) {
       const startDate = new Date(reservationData.startTime);
       const formattedStartDate = startDate.toISOString().split("T")[0];
       formData.append("checkIn", formattedStartDate);
-      
-      const hours = startDate.getHours().toString().padStart(2, '0');
-      const minutes = startDate.getMinutes().toString().padStart(2, '0');
+
+      const hours = startDate.getHours().toString().padStart(2, "0");
+      const minutes = startDate.getMinutes().toString().padStart(2, "0");
       formData.append("startTime", `${hours}:${minutes}`);
     }
 
@@ -116,21 +127,30 @@ export const createReservation = async (reservationData: ReservationFormData) =>
       const endDate = new Date(reservationData.endTime);
       const formattedEndDate = endDate.toISOString().split("T")[0];
       formData.append("checkOut", formattedEndDate);
-      
-      const hours = endDate.getHours().toString().padStart(2, '0');
-      const minutes = endDate.getMinutes().toString().padStart(2, '0');
+
+      const hours = endDate.getHours().toString().padStart(2, "0");
+      const minutes = endDate.getMinutes().toString().padStart(2, "0");
       formData.append("endTime", `${hours}:${minutes}`);
     }
 
-    formData.append("totalPrice", reservationData.totalPrice?.toString() || "0");
-    
+    formData.append(
+      "totalPrice",
+      reservationData.totalPrice?.toString() || "0"
+    );
+
     if (reservationData.numberOfGuests !== undefined) {
-      formData.append("numberOfGuests", reservationData.numberOfGuests.toString());
+      formData.append(
+        "numberOfGuests",
+        reservationData.numberOfGuests.toString()
+      );
     }
 
-    formData.append('paymentMethod', reservationData.paymentMethod);
+    formData.append("paymentMethod", reservationData.paymentMethod);
 
-    if (reservationData.paymentMethod === 'gcash' && reservationData.paymentProof) {
+    if (
+      reservationData.paymentMethod === "gcash" &&
+      reservationData.paymentProof
+    ) {
       formData.append("paymentProof", reservationData.paymentProof);
     }
 
@@ -352,12 +372,19 @@ export const deleteReview = async (reviewId: string) => {
   }
 };
 
-export const fetchRoomReviews = async (roomId: string, page: number, pageSize: number) => {
+export const fetchRoomReviews = async (
+  roomId: string,
+  page: number,
+  pageSize: number
+) => {
   try {
-    const response = await booking.get(`/rooms/${roomId}/reviews?page=${page}&page_size=${pageSize}`, {
-      headers: { "Content-Type": "application/json" },
-      withCredentials: true,
-    });
+    const response = await booking.get(
+      `/rooms/${roomId}/reviews?page=${page}&page_size=${pageSize}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch room reviews: ${error}`);
@@ -365,12 +392,19 @@ export const fetchRoomReviews = async (roomId: string, page: number, pageSize: n
   }
 };
 
-export const fetchAreaReviews = async (areaId: string, page: number, pageSize: number) => {
+export const fetchAreaReviews = async (
+  areaId: string,
+  page: number,
+  pageSize: number
+) => {
   try {
-    const response = await booking.get(`/areas/${areaId}/reviews?page=${page}&page_size=${pageSize}`, {
-      headers: { "Content-Type": "application/json" },
-      withCredentials: true,
-    });
+    const response = await booking.get(
+      `/areas/${areaId}/reviews?page=${page}&page_size=${pageSize}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch area reviews: ${error}`);
@@ -380,8 +414,8 @@ export const fetchAreaReviews = async (areaId: string, page: number, pageSize: n
 
 export const checkMaxDailyBookings = async () => {
   try {
-    const response = await booking.get('/check-max-bookings/', {
-      withCredentials: true
+    const response = await booking.get("/check-max-bookings/", {
+      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -392,7 +426,7 @@ export const checkMaxDailyBookings = async () => {
 
 export const getUserBookingsForToday = async () => {
   try {
-    const response = await booking.get('/check-max-bookings/', {
+    const response = await booking.get("/check-max-bookings/", {
       withCredentials: true,
     });
     return response;
@@ -402,15 +436,18 @@ export const getUserBookingsForToday = async () => {
   }
 };
 
-export const checkCanBookToday = async (): Promise<{ canBook: boolean; message?: string }> => {
+export const checkCanBookToday = async (): Promise<{
+  canBook: boolean;
+  message?: string;
+}> => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
 
     if (!token) {
       return { canBook: true };
     }
 
-    const response = await booking.get('/check-can-book-today/', {
+    const response = await booking.get("/check-can-book-today/", {
       withCredentials: true,
     });
     return response.data;
@@ -418,4 +455,22 @@ export const checkCanBookToday = async (): Promise<{ canBook: boolean; message?:
     console.error(`Error checking booking eligibility: ${error}`);
     return { canBook: true };
   }
-}
+};
+
+export const generateCheckoutEReceipt = async (bookingId: string) => {
+  try {
+    const response = await booking.get(
+      `/generate_checkout_e_receipt/${bookingId}`,
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to generate checkout e-receipt: ${error}`);
+    throw error;
+  }
+};

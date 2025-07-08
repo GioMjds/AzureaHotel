@@ -242,10 +242,11 @@ export const generateMonthlyReport = async (
     y += 70;
   }
 
-  const revenueInsights = `Total monthly revenue: ${reportData.stats.formattedRevenue
-    }. Room revenue accounts for ${Math.round(
-      ((reportData.stats.revenue * 0.75) / reportData.stats.revenue) * 100
-    )}% of total revenue, with the remainder coming from venue bookings and additional services.`;
+  const revenueInsights = `Total monthly revenue: ${
+    reportData.stats.formattedRevenue
+  }. Room revenue accounts for ${Math.round(
+    ((reportData.stats.revenue * 0.75) / reportData.stats.revenue) * 100
+  )}% of total revenue, with the remainder coming from venue bookings and additional services.`;
   y = drawDescriptionText(doc, revenueInsights, y);
   y += 3;
 
@@ -302,7 +303,7 @@ export const generateMonthlyReport = async (
   const tableData = statusLabels.map((status) => {
     const count =
       reportData.bookingStatusCounts[
-      status.key as keyof typeof reportData.bookingStatusCounts
+        status.key as keyof typeof reportData.bookingStatusCounts
       ];
     const percentage =
       totalBookings > 0
@@ -316,27 +317,28 @@ export const generateMonthlyReport = async (
   const pendingPercent =
     totalBookings > 0
       ? (
-        (reportData.bookingStatusCounts.pending / totalBookings) *
-        100
-      ).toFixed(1)
+          (reportData.bookingStatusCounts.pending / totalBookings) *
+          100
+        ).toFixed(1)
       : "0";
   const cancelledPercent =
     totalBookings > 0
       ? (
-        (reportData.bookingStatusCounts.cancelled / totalBookings) *
-        100
-      ).toFixed(1)
+          (reportData.bookingStatusCounts.cancelled / totalBookings) *
+          100
+        ).toFixed(1)
       : "0";
 
-  const bookingInsights = `Currently, ${pendingPercent}% of all bookings are pending confirmation, while ${cancelledPercent}% have been cancelled. Active revenue-generating bookings (reserved and checked-in) account for ${totalBookings > 0
-    ? (
-      ((reportData.bookingStatusCounts.reserved +
-        reportData.bookingStatusCounts.checked_in) /
-        totalBookings) *
-      100
-    ).toFixed(1)
-    : "0"
-    }% of all bookings.`;
+  const bookingInsights = `Currently, ${pendingPercent}% of all bookings are pending confirmation, while ${cancelledPercent}% have been cancelled. Active revenue-generating bookings (reserved and checked-in) account for ${
+    totalBookings > 0
+      ? (
+          ((reportData.bookingStatusCounts.reserved +
+            reportData.bookingStatusCounts.checked_in) /
+            totalBookings) *
+          100
+        ).toFixed(1)
+      : "0"
+  }% of all bookings.`;
   y = drawDescriptionText(doc, bookingInsights, y);
 
   if (y > 250) {
@@ -392,18 +394,16 @@ export const generateMonthlyReport = async (
   doc.save(`Hotel_Monthly_Report_${format(new Date(), "yyyy-MM")}.pdf`);
 };
 
-export const prepareReportData = (
-  data: {
-    period: string;
-    stats: any;
-    bookingStatusCounts: any;
-    roomData?: {
-      names: string[];
-      bookings: number[];
-      revenue: number[];
-    };
-  }
-): ReportData => {
+export const prepareReportData = (data: {
+  period: string;
+  stats: any;
+  bookingStatusCounts: any;
+  roomData?: {
+    names: string[];
+    bookings: number[];
+    revenue: number[];
+  };
+}): ReportData => {
   return {
     title: "Monthly Performance Report",
     period: data.period,
@@ -466,4 +466,381 @@ export const prepareReportData = (
       },
     },
   };
+};
+
+export const generateEReceipt = async (bookingData: any): Promise<void> => {
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  // Colors
+  const primaryColor = [26, 115, 232] as const; // Blue
+  const secondaryColor = [63, 81, 181] as const; // Indigo
+  const accentColor = [255, 193, 7] as const; // Amber
+  const successColor = [76, 175, 80] as const; // Green
+  const lightGray = [245, 245, 245] as const;
+  const mediumGray = [158, 158, 158] as const;
+  const darkGray = [66, 66, 66] as const;
+
+  // Set white background
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, 210, 297, "F");
+
+  let y = 20;
+
+  // HEADER SECTION WITH GRADIENT EFFECT
+  // Header background
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.rect(0, 0, 210, 50, "F");
+
+  // Hotel logo placeholder (decorative rectangle)
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(20, 12, 30, 25, 3, 3, "F");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("AZUREA", 35, 27, { align: "center" });
+
+  // Hotel name and receipt title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text("AZUREA HOTEL & RESORT", 110, 22, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "normal");
+  doc.text("ELECTRONIC RECEIPT", 110, 32, { align: "center" });
+
+  // Hotel contact info
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const hotelAddress =
+    bookingData.receipt_data?.hotel_info?.address ||
+    "123 Luxury Boulevard, Paradise City";
+  const hotelPhone =
+    bookingData.receipt_data?.hotel_info?.phone || "+63 (02) 123-4567";
+  const hotelEmail =
+    bookingData.receipt_data?.hotel_info?.email ||
+    "reservations@azureahotel.com";
+
+  doc.text(`${hotelAddress} | ${hotelPhone} | ${hotelEmail}`, 110, 41, {
+    align: "center",
+  });
+
+  y = 65;
+
+  // RECEIPT INFORMATION CARD
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+  doc.roundedRect(20, y, 170, 35, 5, 5, "F");
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(1);
+  doc.roundedRect(20, y, 170, 35, 5, 5, "S");
+
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+
+  // Receipt number
+  doc.text("Receipt No:", 25, y + 12);
+  doc.setFont("helvetica", "normal");
+  const receiptNumber =
+    bookingData.receipt_data?.receipt_number ||
+    `REC-${String(bookingData.id).padStart(6, "0")}`;
+  doc.text(receiptNumber, 55, y + 12);
+
+  // Generation date
+  doc.setFont("helvetica", "bold");
+  doc.text("Generated:", 25, y + 22);
+  doc.setFont("helvetica", "normal");
+  const generatedDate = bookingData.receipt_data?.generated_at
+    ? format(
+        new Date(bookingData.receipt_data.generated_at),
+        "MMM dd, yyyy 'at' h:mm a"
+      )
+    : format(new Date(), "MMM dd, yyyy 'at' h:mm a");
+  doc.text(generatedDate, 55, y + 22);
+
+  // Booking ID
+  doc.setFont("helvetica", "bold");
+  doc.text("Booking ID:", 115, y + 12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`#${String(bookingData.id).padStart(6, "0")}`, 150, y + 12);
+
+  // Status badge
+  doc.setFont("helvetica", "bold");
+  doc.text("Status:", 115, y + 22);
+  doc.setFillColor(successColor[0], successColor[1], successColor[2]);
+  doc.roundedRect(148, y + 17, 35, 8, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.text("CHECKED OUT", 165, y + 22, { align: "center" });
+
+  y += 50;
+
+  // GUEST INFORMATION SECTION
+  y = drawModernSectionHeader(doc, "GUEST INFORMATION", y, primaryColor);
+
+  const user = bookingData.user;
+  const guestName =
+    `${user?.first_name || ""} ${user?.last_name || ""}`.trim() || "N/A";
+
+  y = drawInfoRow(doc, "Guest Name", guestName, y);
+  y = drawInfoRow(doc, "Email Address", user?.email || "N/A", y);
+  y = drawInfoRow(doc, "Phone Number", bookingData.phone_number || "N/A", y);
+
+  y += 15;
+
+  // BOOKING DETAILS SECTION
+  y = drawModernSectionHeader(doc, "ACCOMMODATION DETAILS", y, secondaryColor);
+
+  y = drawInfoRow(doc, "Property Type", bookingData.property_type || "Room", y);
+  y = drawInfoRow(doc, "Property Name", bookingData.property_name || "N/A", y);
+
+  const checkInDate = bookingData.check_in_date
+    ? format(new Date(bookingData.check_in_date), "EEEE, MMMM do, yyyy")
+    : "N/A";
+  const checkOutDate = bookingData.check_out_date
+    ? format(new Date(bookingData.check_out_date), "EEEE, MMMM do, yyyy")
+    : "N/A";
+
+  y = drawInfoRow(doc, "Check-in Date", checkInDate, y);
+  y = drawInfoRow(doc, "Check-out Date", checkOutDate, y);
+  y = drawInfoRow(doc, "Duration of Stay", bookingData.duration || "N/A", y);
+
+  if (bookingData.number_of_guests) {
+    const guestText = `${bookingData.number_of_guests} guest${
+      bookingData.number_of_guests > 1 ? "s" : ""
+    }`;
+    y = drawInfoRow(doc, "Number of Guests", guestText, y);
+  }
+
+  if (bookingData.special_request) {
+    y += 3;
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Special Requests:", 25, y);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(66, 66, 66);
+    const maxWidth = 140;
+    const requestLines = doc.splitTextToSize(
+      bookingData.special_request,
+      maxWidth
+    );
+    y += 5;
+    requestLines.forEach((line: string, index: number) => {
+      doc.text(line, 25, y + index * 5);
+    });
+    y += requestLines.length * 5;
+  }
+
+  y += 15;
+
+  // PAYMENT SUMMARY SECTION
+  y = drawModernSectionHeader(doc, "PAYMENT SUMMARY", y, accentColor);
+
+  const payment = bookingData.payment_breakdown;
+
+  // Enhanced payment table
+  const tableStartY = y;
+  const tableWidth = 170;
+  const headerHeight = 15;
+  const rowHeight = 12;
+
+  // Table header
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.rect(20, tableStartY, tableWidth, headerHeight, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("DESCRIPTION", 25, tableStartY + 10);
+  doc.text("AMOUNT", 165, tableStartY + 10, { align: "right" });
+
+  let currentRowY = tableStartY + headerHeight;
+  let rowCount = 0;
+
+  // Payment rows
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+
+  if (payment?.down_payment && payment.down_payment > 0) {
+    // Alternating row colors
+    if (rowCount % 2 === 0) {
+      doc.setFillColor(250, 250, 250);
+      doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
+    }
+    doc.text("Down Payment", 25, currentRowY + 8);
+    doc.text(
+      `₱${payment.down_payment.toLocaleString()}`,
+      185,
+      currentRowY + 8,
+      { align: "right" }
+    );
+    currentRowY += rowHeight;
+    rowCount++;
+  }
+
+  if (payment?.remaining_balance && payment.remaining_balance > 0) {
+    if (rowCount % 2 === 0) {
+      doc.setFillColor(250, 250, 250);
+      doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
+    }
+    doc.text("Remaining Balance", 25, currentRowY + 8);
+    doc.text(
+      `₱${payment.remaining_balance.toLocaleString()}`,
+      185,
+      currentRowY + 8,
+      { align: "right" }
+    );
+    currentRowY += rowHeight;
+    rowCount++;
+  }
+
+  // Total row with emphasis
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+  doc.rect(20, currentRowY, tableWidth, rowHeight + 3, "F");
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(1);
+  doc.line(20, currentRowY, 190, currentRowY);
+
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("TOTAL AMOUNT PAID", 25, currentRowY + 10);
+  doc.text(
+    `₱${payment?.total_amount?.toLocaleString() || "0"}`,
+    185,
+    currentRowY + 10,
+    { align: "right" }
+  );
+
+  // Table border
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(1);
+  doc.rect(
+    20,
+    tableStartY,
+    tableWidth,
+    currentRowY - tableStartY + rowHeight + 3
+  );
+
+  y = currentRowY + rowHeight + 20;
+
+  // Payment method and status
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  y = drawInfoRow(doc, "Payment Method", payment?.payment_method || "N/A", y);
+  y = drawInfoRow(doc, "Payment Status", payment?.payment_status || "N/A", y);
+
+  y += 20;
+
+  // FOOTER SECTION
+  // Thank you message
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+  doc.roundedRect(20, y, 170, 25, 5, 5, "F");
+
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Thank you for choosing Azurea Hotel!", 105, y + 10, {
+    align: "center",
+  });
+
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("We hope you enjoyed your stay with us!", 105, y + 18, {
+    align: "center",
+  });
+
+  y += 35;
+
+  // Legal disclaimer
+  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "This is a computer-generated receipt and does not require a signature.",
+    105,
+    y,
+    { align: "center" }
+  );
+  doc.text(
+    "For any inquiries regarding this receipt, please contact our front desk.",
+    105,
+    y + 5,
+    { align: "center" }
+  );
+  doc.text(
+    `Generated on ${format(new Date(), "MMMM dd, yyyy 'at' h:mm a")}`,
+    105,
+    y + 10,
+    { align: "center" }
+  );
+
+  // Decorative footer border
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(2);
+  doc.line(20, y + 20, 190, y + 20);
+
+  // Save the PDF with improved filename
+  const fileName = `Azurea_E-Receipt_${String(bookingData.id).padStart(
+    6,
+    "0"
+  )}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+  doc.save(fileName);
+};
+
+// Helper function for modern section headers
+const drawModernSectionHeader = (
+  doc: jsPDF,
+  text: string,
+  y: number,
+  color: readonly [number, number, number]
+): number => {
+  // Section header with colored accent
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.rect(20, y - 2, 5, 12, "F");
+
+  doc.setFillColor(248, 249, 250);
+  doc.rect(25, y - 2, 165, 12, "F");
+
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(text, 30, y + 6);
+
+  return y + 20;
+};
+
+// Helper function for consistent info rows
+const drawInfoRow = (
+  doc: jsPDF,
+  label: string,
+  value: string,
+  y: number
+): number => {
+  doc.setTextColor(66, 66, 66);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${label}:`, 25, y);
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(33, 33, 33);
+
+  // Handle long text by wrapping
+  const maxWidth = 120;
+  const lines = doc.splitTextToSize(value, maxWidth);
+
+  lines.forEach((line: string, index: number) => {
+    doc.text(line, 80, y + index * 5);
+  });
+
+  return y + 8 + Math.max(0, lines.length - 1) * 5;
 };

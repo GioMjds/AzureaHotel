@@ -90,7 +90,7 @@ export const transaction = axios.create({
 });
 
 export const food = axios.create({
-  baseURL: `http://10.0.0.34:5000/Admin`,
+  baseURL: `http://192.168.54.155:5000/Admin`,
   headers: {
     "Content-Type": "application/json",
   },

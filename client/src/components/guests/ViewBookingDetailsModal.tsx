@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { X } from "lucide-react"
-import { FC } from "react"
+import { FC, useState } from "react"
+import { toast } from "react-toastify"
 import { BookingDetailsSkeleton } from "../../motions/skeletons/GuestDetailSkeleton"
-import { fetchBookingDetail } from "../../services/Booking"
+import { fetchBookingDetail, generateCheckoutEReceipt } from "../../services/Booking"
+import { generateEReceipt } from "../../utils/reports"
 import BookingData from "../bookings/BookingData"
 
 interface ViewBookingDetailsModalProps {
@@ -12,10 +14,33 @@ interface ViewBookingDetailsModalProps {
 }
 
 const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ bookingId, onClose }) => {
+    const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+
     const { data, isLoading, isError } = useQuery({
         queryKey: ['bookingDetails', bookingId],
         queryFn: () => fetchBookingDetail(bookingId),
     });
+
+    const handleGenerateEReceipt = async () => {
+        if (!data) return;
+
+        try {
+            setIsGeneratingReceipt(true);
+            const receiptData = await generateCheckoutEReceipt(data.id.toString());
+
+            if (receiptData.success) {
+                await generateEReceipt(receiptData.data);
+                toast.success("E-Receipt generated successfully!");
+            } else {
+                toast.error(receiptData.error || "Failed to generate E-Receipt");
+            }
+        } catch (error) {
+            console.error("Error generating E-Receipt:", error);
+            toast.error("Failed to generate E-Receipt. Please try again.");
+        } finally {
+            setIsGeneratingReceipt(false);
+        }
+    };
 
     return (
         <AnimatePresence>
@@ -34,14 +59,28 @@ const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ bookingId, 
                     >
                         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                             <h2 className="text-2xl font-bold text-gray-800">Booking Details</h2>
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={onClose}
-                                className="p-2 hover:bg-gray-100 cursor-pointer hover:text-red-600 rounded-full text-gray-500"
-                            >
-                                <X size={24} />
-                            </motion.button>
+                            <div className="flex items-center gap-3">
+                                {/* E-Receipt Button - Only show for checked-out bookings */}
+                                {data && data.status === 'checked_out' && (
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={handleGenerateEReceipt}
+                                        disabled={isGeneratingReceipt}
+                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
+                                    >
+                                        {isGeneratingReceipt ? 'Generating...' : 'Download E-Receipt'}
+                                    </motion.button>
+                                )}
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-gray-100 cursor-pointer hover:text-red-600 rounded-full text-gray-500"
+                                >
+                                    <X size={24} />
+                                </motion.button>
+                            </div>
                         </div>
 
                         <div className="max-h-[70vh] overflow-y-auto p-3">

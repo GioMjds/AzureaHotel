@@ -1,19 +1,25 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .models import Bookings, Reviews
+from .models import Bookings, Reviews, CraveOnUser, CraveOnCategory, CraveOnItem
 from property.models import Rooms, Areas
 from property.serializers import AreaSerializer, RoomSerializer
 from .serializers import (
     BookingSerializer, 
     BookingRequestSerializer,
-    ReviewSerializer
+    ReviewSerializer,
+    CraveOnUserSerializer,
+    CraveOnCategorySerializer,
+    CraveOnItemSerializer
 )
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
 from django.db.models import Q
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db import connections
+from django.http import JsonResponse
+import json
 
 # Create your views here.
 @api_view(['GET'])
@@ -597,3 +603,99 @@ def area_reviews(request, area_id):
         return Response({"error": "Area not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def generate_checkout_e_receipt(request, booking_id):
+    try:
+        # Fetch the booking
+        try:
+            booking = Bookings.objects.get(id=booking_id)
+        except Bookings.DoesNotExist:
+            return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user has permission to view this booking
+        if request.user.role == 'guest' and booking.user != request.user:
+            return Response({"error": "You don't have permission to access this booking"}, 
+                            status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if booking is checked out
+        if booking.status.lower() != 'checked_out':
+            return Response({"error": "E-Receipt can only be generated for checked-out bookings"}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prepare booking data for E-Receipt
+        booking_serializer = BookingSerializer(booking)
+        booking_data = booking_serializer.data
+        
+        # Add additional details based on booking type
+        if booking.is_venue_booking and booking.area:
+            area_serializer = AreaSerializer(booking.area)
+            booking_data['area_details'] = area_serializer.data
+            booking_data['property_type'] = 'Area'
+            booking_data['property_name'] = booking.area.area_name
+            booking_data['property_capacity'] = booking.area.capacity
+        elif booking.room:
+            room_serializer = RoomSerializer(booking.room)
+            booking_data['room_details'] = room_serializer.data
+            booking_data['property_type'] = 'Room'
+            booking_data['property_name'] = booking.room.room_name
+            booking_data['property_capacity'] = booking.room.max_guests
+        
+        # Calculate stay duration
+        if booking.check_in_date and booking.check_out_date:
+            check_in = booking.check_in_date
+            check_out = booking.check_out_date
+            if booking.is_venue_booking:
+                # For venues, calculate hours
+                from datetime import datetime, timedelta
+                if booking.start_time and booking.end_time:
+                    start_datetime = datetime.combine(check_in, booking.start_time)
+                    end_datetime = datetime.combine(check_out, booking.end_time)
+                    duration_hours = (end_datetime - start_datetime).total_seconds() / 3600
+                    booking_data['duration'] = f"{int(duration_hours)} hours"
+                else:
+                    booking_data['duration'] = "1 hour"
+            else:
+                # For rooms, calculate nights
+                duration_days = (check_out - check_in).days
+                booking_data['duration'] = f"{duration_days} night{'s' if duration_days != 1 else ''}"
+        
+        # Add receipt metadata
+        booking_data['receipt_data'] = {
+            'receipt_number': f"REC-{booking.id}-{timezone.now().strftime('%Y%m%d')}",
+            'generated_at': timezone.now().isoformat(),
+            'generated_by': f"{request.user.first_name} {request.user.last_name}",
+            'hotel_info': {
+                'name': 'Azurea Hotel',
+                'address': 'Azurea Hotel Address',
+                'phone': '+63 XXX XXX XXXX',
+                'email': 'info@azureahotel.com'
+            }
+        }
+        
+        # Add payment breakdown
+        total_amount = float(booking.total_price or 0)
+        down_payment = float(booking.down_payment or 0)
+        remaining_balance = total_amount - down_payment
+        
+        booking_data['payment_breakdown'] = {
+            'total_amount': total_amount,
+            'down_payment': down_payment,
+            'remaining_balance': remaining_balance,
+            'payment_method': booking.get_payment_method_display(),
+            'payment_status': booking.payment_status
+        }
+        
+        return Response({
+            "success": True,
+            "message": "E-Receipt data generated successfully",
+            "data": booking_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": f"Failed to generate E-Receipt: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -156,6 +156,14 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
     },
+    'SystemInteg': {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "craveon",
+        "USER": "root",
+        "PASSWORD": "ClodAndrei8225",
+        "HOST": "192.168.54.155",
+        "PORT": "3306",
+    }
 }
 
 AUTHENTICATION_BACKENDS = [
