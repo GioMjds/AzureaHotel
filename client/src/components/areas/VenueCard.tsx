@@ -98,7 +98,7 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
     >
       {/* Discount badge top-right */}
       {displayDiscountPercent > 0 && (
-        <span className="absolute top-3 right-3 z-20 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-bounce">
+        <span className="absolute top-3 right-3 z-20 bg-red-500 text-white text-md font-bold p-3 rounded-full shadow-lg">
           -{displayDiscountPercent}% OFF
         </span>
       )}

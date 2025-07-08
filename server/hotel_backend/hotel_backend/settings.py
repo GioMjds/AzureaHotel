@@ -158,11 +158,11 @@ DATABASES = {
     },
     'SystemInteg': {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "craveon",
-        "USER": "root",
-        "PASSWORD": "ClodAndrei8225",
-        "HOST": "192.168.54.155",
-        "PORT": "3306",
+        "NAME": os.getenv('CRAVEON_DB_NAME'),
+        "USER": os.getenv('CRAVEON_DB_USER'),
+        "PASSWORD": os.getenv('CRAVEON_DB_PASSWORD'),
+        "HOST": os.getenv('CRAVEON_DB_HOST'),
+        "PORT": os.getenv('CRAVEON_DB_PORT'),
     }
 }
 

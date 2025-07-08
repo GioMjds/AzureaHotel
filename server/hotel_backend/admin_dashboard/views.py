@@ -55,29 +55,6 @@ def notify_user_for_verification(user, notification_type, message):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_admin_details(request):
-    user = request.user
-    
-    if user.role != 'admin':
-        return Response({"error": "Only admin users can access this endpoint"}, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        admin_user = CustomUsers.objects.get(id=user.id, role='admin')
-    
-        data = {
-            "name": admin_user.first_name + " " + admin_user.last_name,
-            "role": admin_user.role,
-            "profile_pic": admin_user.profile_image.url if admin_user.profile_image else None
-        }
-    
-        return Response({
-            'data': data
-        }, status=status.HTTP_200_OK)
-    except CustomUsers.DoesNotExist:
-        return Response({"error": "Admin not found"}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
     try:
         month = int(request.query_params.get('month', timezone.now().month))
@@ -700,9 +677,14 @@ def admin_bookings(request):
             'checked_out'
         ]
         
-        bookings = Bookings.objects.filter(
-            ~Q(status__in=exclude_statuses)
-        ).order_by('created_at')
+        status_filter = request.query_params.get('status')
+        
+        bookings = Bookings.objects.all().order_by('created_at')
+        
+        if status_filter and status_filter != "all":
+            bookings = bookings.filter(status=status_filter)
+        else:
+            bookings = bookings.exclude(status__in=exclude_statuses)
         
         page = request.query_params.get('page', 1)
         page_size = request.query_params.get('page_size', 9)

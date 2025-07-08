@@ -34,8 +34,8 @@ const ManageBookings: FC = () => {
   const pageSize = 9;
 
   const { data: bookingsResponse, error, isLoading } = useQuery<BookingQuery>({
-    queryKey: ["adminBookings", currentPage, pageSize],
-    queryFn: () => getAllBookings(currentPage, pageSize),
+    queryKey: ["adminBookings", currentPage, pageSize, statusFilter],
+    queryFn: () => getAllBookings(currentPage, pageSize, statusFilter),
   });
 
   useWebSockets(webSocketAdminActives, userDetails?.id, {
@@ -80,7 +80,6 @@ const ManageBookings: FC = () => {
             console.log(`Successfully recorded payment of ${paymentAmount}`, paymentResult);
           } catch (error) {
             console.error(`Failed to record payment: ${error}`);
-            throw new Error(`Booking status updated but payment recording failed: ${error}`);
           }
         }
 
@@ -224,10 +223,8 @@ const ManageBookings: FC = () => {
 
   const totalPages = bookingsResponse?.pagination?.total_pages || 1;
   const filteredBookings = (bookingsResponse?.data || []).filter((booking) => {
-    const guestName = `${booking.user?.first_name || ""} ${booking.user?.last_name || ""
-      }`.toLowerCase();
+    const guestName = `${booking.user?.first_name || ""} ${booking.user?.last_name || ""}`.toLowerCase();
     const email = booking.user?.email?.toLowerCase() || "";
-
     const propertyName = booking.is_venue_booking
       ? booking.area_details?.area_name?.toLowerCase() || ""
       : booking.room_details?.room_name?.toLowerCase() || "";
@@ -238,11 +235,7 @@ const ManageBookings: FC = () => {
       email.includes(searchTerm.toLowerCase()) ||
       propertyName.includes(searchTerm.toLowerCase());
 
-    const statusMatch =
-      statusFilter === "all" ||
-      booking.status?.toLowerCase() === statusFilter.toLowerCase();
-
-    return searchMatch && statusMatch;
+    return searchMatch;
   });
 
   const handleCancellationInitiate = () => {

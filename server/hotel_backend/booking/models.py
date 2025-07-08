@@ -73,6 +73,7 @@ class Bookings(models.Model):
     payment_date = models.DateTimeField(null=True, blank=True)
     number_of_guests = models.PositiveIntegerField(default=1)
     is_discounted = models.BooleanField(default=False)
+    has_food_order = models.BooleanField(default=False)
 
     def apply_pwd_senior_discount(self):
         from user_roles.models import PWD_SENIOR_DISCOUNT_PERCENT

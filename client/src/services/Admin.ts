@@ -618,12 +618,13 @@ export const getBookingDetails = async (bookingId: number) => {
   }
 };
 
-export const getAllBookings = async (page: number, pageSize: number) => {
+export const getAllBookings = async (page: number, pageSize: number, status?: string) => {
   try {
     const response = await ADMIN.get("/bookings", {
       params: {
-        page,
-        page_size: pageSize,
+        page: String(page),
+        page_size: String(pageSize),
+        status: status
       },
       withCredentials: true,
     });

@@ -649,7 +649,6 @@ def generate_checkout_e_receipt(request, booking_id):
             check_out = booking.check_out_date
             if booking.is_venue_booking:
                 # For venues, calculate hours
-                from datetime import datetime, timedelta
                 if booking.start_time and booking.end_time:
                     start_datetime = datetime.combine(check_in, booking.start_time)
                     end_datetime = datetime.combine(check_out, booking.end_time)
@@ -669,9 +668,9 @@ def generate_checkout_e_receipt(request, booking_id):
             'generated_by': f"{request.user.first_name} {request.user.last_name}",
             'hotel_info': {
                 'name': 'Azurea Hotel',
-                'address': 'Azurea Hotel Address',
+                'address': 'Brgy. Dayap',
                 'phone': '+63 XXX XXX XXXX',
-                'email': 'info@azureahotel.com'
+                'email': 'azureahotelmanagement@gmail.com'
             }
         }
         

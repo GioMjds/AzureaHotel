@@ -151,7 +151,6 @@ const BookingCalendar = () => {
 
             setMaxDayExceed(days > 30);
 
-            // Use shared pricing utility
             const pricingResult = calculateRoomPricing({
                 roomData,
                 userDetails,

@@ -3,7 +3,6 @@ from . import views
 
 # /master/** routes
 urlpatterns = [
-    path('details', views.get_admin_details, name='get_admin_details'),
     path('stats', views.dashboard_stats, name='dashboard_stats'),
     path('booking_status_counts', views.booking_status_counts, name='booking_status_counts'),
     
