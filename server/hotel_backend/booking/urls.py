@@ -21,4 +21,7 @@ urlpatterns = [
     path('rooms/<int:room_id>/bookings', views.fetch_room_bookings, name='room_bookings'),
     path('rooms/<int:room_id>/reviews', views.room_reviews, name='room_reviews'),
     path('generate_checkout_e_receipt/<str:booking_id>', views.generate_checkout_e_receipt, name='generate_checkout_e_receipt'),
+    
+    # For Food Ordering (fetch the API from the other system) -> CraveOn
+    path('fetch_foods', views.fetch_foods, name='fetch_foods'),
 ]

@@ -17,9 +17,8 @@ from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
 from django.db.models import Q
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from django.db import connections
-from django.http import JsonResponse
-import json
+import requests
+
 
 # Create your views here.
 @api_view(['GET'])
@@ -698,3 +697,41 @@ def generate_checkout_e_receipt(request, booking_id):
             "success": False,
             "error": f"Failed to generate E-Receipt: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def fetch_foods(request):
+    try:
+        # Suppose the API endpoint is this, this may interchanged
+        response = requests.get("http://192.168.1.14:5000/Admin/Manage-Item")
+        
+        if response.status_code == 200:
+            data = response.json()
+            return Response({
+                "data": data.get('data', []),
+                "message": "Food items fetched successfully"
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "error": f"Failed to fetch food items from CraveOn API. Status code: {response.status_code}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def place_food_order(request):
+    try:
+        # Replace with the actual API endpoint
+        response = requests.post("http://192.168.1.14:5000/buy-now")
+        
+        if response.status_code == 200:
+            data = response.json()
+            return Response({
+                "data": data.get('data', []),
+                "message": "Food order placed successfully"
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "error": f"Failed to place food order. Status code: {response.status_code}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

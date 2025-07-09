@@ -1,12 +1,11 @@
-import { food } from "./_axios";
+import { booking } from "./_axios";
 
 export const fetchCraveOnFoods = async () => {
     try {
-        const response = await food.get('/Manage-Item', {
+        const response = await booking.get('/fetch_foods', {
             headers: {
-                'Accept': 'application/json',
+                'Content-Type': 'application/json',
             },
-            withCredentials: true,
         });
         return response.data;
     } catch (error) {
