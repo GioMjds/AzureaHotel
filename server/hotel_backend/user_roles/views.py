@@ -615,6 +615,9 @@ def user_login(request):
         if user.is_archived:
             return Response({'error': 'User account is archived'}, status=status.HTTP_403_FORBIDDEN)
         
+        if not user.check_password(password):
+            return Response({'error': 'Your password is incorrect.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         auth_user = authenticate(request, username=email, password=password)
         
         if auth_user is None:

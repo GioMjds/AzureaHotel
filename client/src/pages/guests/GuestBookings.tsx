@@ -567,6 +567,7 @@ const GuestBookings = () => {
 
       {showBookingDetailModal && (
         <ViewBookingDetailsModal
+          isOpen={showBookingDetailModal}
           bookingId={selectedBookingId}
           onClose={() => {
             setSelectedBookingId(null);

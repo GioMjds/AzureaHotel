@@ -24,4 +24,6 @@ urlpatterns = [
     
     # For Food Ordering (fetch the API from the other system) -> CraveOn
     path('fetch_foods', views.fetch_foods, name='fetch_foods'),
+    path('place_food_order', views.place_food_order, name='place_food_order'),
+    path('fetch_food_orders', views.fetch_food_orders, name='fetch_food_orders'),
 ]

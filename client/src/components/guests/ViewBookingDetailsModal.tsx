@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { X } from "lucide-react"
-import { FC, useState } from "react"
+import { FC, useEffect, useState } from "react"
 import { toast } from "react-toastify"
 import { BookingDetailsSkeleton } from "../../motions/skeletons/GuestDetailSkeleton"
 import { fetchBookingDetail, generateCheckoutEReceipt } from "../../services/Booking"
@@ -9,11 +9,12 @@ import { generateEReceipt } from "../../utils/reports"
 import BookingData from "../bookings/BookingData"
 
 interface ViewBookingDetailsModalProps {
+    isOpen: boolean;
     bookingId: number;
     onClose: () => void;
 }
 
-const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ bookingId, onClose }) => {
+const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ isOpen, bookingId, onClose }) => {
     const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
     const { data, isLoading, isError } = useQuery({
@@ -29,21 +30,29 @@ const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ bookingId, 
             const receiptData = await generateCheckoutEReceipt(data.id.toString());
 
             if (receiptData.success) {
-                await generateEReceipt(receiptData.data);
+                await generateEReceipt(receiptData.data);                       
                 toast.success("E-Receipt generated successfully!");
             } else {
-                toast.error(receiptData.error || "Failed to generate E-Receipt");
+                toast.error("Failed to generate E-Receipt");
             }
         } catch (error) {
-            console.error("Error generating E-Receipt:", error);
+            console.error(`Error generating E-Receipt: ${error}`);
             toast.error("Failed to generate E-Receipt. Please try again.");
         } finally {
             setIsGeneratingReceipt(false);
         }
     };
-
+    
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        }
+        if (isOpen) window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen, onClose]);
+    
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {bookingId && (
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -60,14 +69,13 @@ const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ bookingId, 
                         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                             <h2 className="text-2xl font-bold text-gray-800">Booking Details</h2>
                             <div className="flex items-center gap-3">
-                                {/* E-Receipt Button - Only show for checked-out bookings */}
                                 {data && data.status === 'checked_out' && (
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleGenerateEReceipt}
                                         disabled={isGeneratingReceipt}
-                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
+                                        className="px-4 py-2 cursor-pointer bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
                                     >
                                         {isGeneratingReceipt ? 'Generating...' : 'Download E-Receipt'}
                                     </motion.button>

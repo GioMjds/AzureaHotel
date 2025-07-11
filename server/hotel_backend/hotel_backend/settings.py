@@ -131,8 +131,8 @@ SIMPLE_JWT = {
 }
 
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
     'django.contrib.auth.hashers.BCryptPasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 WSGI_APPLICATION = 'hotel_backend.wsgi.application'

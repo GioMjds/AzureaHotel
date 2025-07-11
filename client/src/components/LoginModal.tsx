@@ -125,10 +125,22 @@ const LoginModal: FC<LoginProps> = ({ toggleLoginModal, openSignupModal, onSucce
       const errData = error.response?.data;
       const statusCode = error.response?.status;
 
+      setError("email", { message: "", type: "" });
+      setError("password", { message: "", type: "" });
+      setError("root.serverError", { message: "", type: "" });
+
       if (statusCode === 403) {
         setError('email', {
           message: errData?.error,
           type: "403"
+        });
+        return;
+      }
+
+      if (statusCode === 401) {
+        setError('password', {
+          message: errData?.error,
+          type: "401"
         });
         return;
       }

@@ -1,17 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
 import { FC, useMemo, useState } from "react";
-import { fetchCraveOnFoods } from "../../services/Food";
-
-interface FoodItem {
-    category_id: number;
-    category_name: string;
-    image: string;
-    item_id: number;
-    item_name: string;
-    price: number;
-}
+import { fetchCraveOnFoods, placeFoodOrder, FoodItem } from "../../services/Food";
+import { toast } from "react-toastify";
 
 interface OrderItem extends FoodItem {
     quantity: number;
@@ -34,8 +27,52 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
         queryFn: () => fetchCraveOnFoods(),
     });
 
+    const placeOrderMutation = useMutation({
+        mutationFn: (orderData: { booking_id: number; items: any }) => placeFoodOrder(orderData),
+        onSuccess: (response) => {
+            if (response.message) {
+                toast.success(response.message);
+                console.log(`CraveOn order ID: ${response.order_id}`);
+                setCart([]);
+                onClose();
+            } else {
+                toast.error("Failed to place food order. Please try again.");
+            }
+        },
+        onError: (error: string) => {
+            console.error(`Failed to place food order: ${error}`);
+            toast.error("Failed to place food order. Please try again later.");
+        }
+    });
+
+    const handlePlaceOrder = () => {
+        if (!bookingId || cart.length === 0) {
+            toast.error("Please add items to your cart before placing an order.");
+            return;
+        }
+
+        const orderItems = cart.map(item => ({
+            item_id: item.item_id,
+            quantity: item.quantity,
+        }));
+
+        placeOrderMutation.mutate({
+            booking_id: bookingId,
+            items: orderItems
+        });
+    }
+
     const activeItems: FoodItem[] = useMemo(() => {
-        return foodData?.active_items || [];
+        if (!foodData || !foodData.items) return [];
+        return foodData?.items.map((item: any) => ({
+            item_id: item.item_id,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            category_id: item.category_id,
+            category_name: item.category_name,
+            quantity: item.quantity
+        }));
     }, [foodData]);
 
     const categories = useMemo(() => {
@@ -53,7 +90,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
         if (searchTerm.trim()) {
             const searchRegex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
             filtered = filtered.filter(item =>
-                searchRegex.test(item.item_name) ||
+                searchRegex.test(item.name) ||
                 searchRegex.test(item.category_name)
             );
         }
@@ -99,11 +136,6 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
 
     const getTotalItems = () => {
         return cart.reduce((total, item) => total + item.quantity, 0);
-    };
-
-    const handlePlaceOrder = () => {
-        setCart([]);
-        onClose();
     };
 
     if (!isOpen) return null;
@@ -218,7 +250,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                                 <div className="relative">
                                                     <img
                                                         src={`data:image/jpeg;base64,${item.image}`}
-                                                        alt={item.item_name}
+                                                        alt={item.name}
                                                         className="w-full h-40 object-cover"
                                                     />
                                                     <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
@@ -226,7 +258,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                                     </div>
                                                 </div>
                                                 <div className="p-4">
-                                                    <h3 className="font-semibold text-gray-800 mb-1">{item.item_name}</h3>
+                                                    <h3 className="font-semibold text-gray-800 mb-1">{item.name}</h3>
                                                     <p className="text-orange-600 font-bold text-lg mb-3">
                                                         ₱{item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                                     </p>
@@ -234,7 +266,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                                         {getItemQuantity(item.item_id) === 0 ? (
                                                             <button
                                                                 onClick={() => addToCart(item)}
-                                                                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                                                                className="bg-orange-500 cursor-pointer hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                                                             >
                                                                 <Plus size={16} />
                                                                 Add to Cart
@@ -298,7 +330,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                                         className="bg-white rounded-lg p-3 border border-gray-200"
                                                     >
                                                         <div className="flex justify-between items-start mb-2">
-                                                            <h4 className="font-semibold text-sm">{item.item_name}</h4>
+                                                            <h4 className="font-semibold text-sm">{item.name}</h4>
                                                             <button
                                                                 onClick={() => removeFromCart(item.item_id)}
                                                                 className="text-red-500 hover:text-red-700"
@@ -342,9 +374,13 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                                             </div>
                                             <button
                                                 onClick={handlePlaceOrder}
-                                                className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 rounded-lg font-semibold transition-colors"
+                                                disabled={placeOrderMutation.isPending}
+                                                className={`w-full py-3 rounded-lg font-semibold transition-colors ${placeOrderMutation.isPending
+                                                    ? "bg-gray-400 cursor-not-allowed"
+                                                    : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                                                } text-white`}
                                             >
-                                                Place Order
+                                                {placeOrderMutation.isPending ? "Placing your order..." : "Confirm Order"}
                                             </button>
                                         </div>
                                     )}

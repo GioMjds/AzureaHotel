@@ -476,10 +476,10 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   });
 
   // Colors
-  const primaryColor = [26, 115, 232] as const; // Blue
-  const secondaryColor = [63, 81, 181] as const; // Indigo
-  const accentColor = [255, 193, 7] as const; // Amber
-  const successColor = [76, 175, 80] as const; // Green
+  const primaryColor = [26, 115, 232] as const;
+  const secondaryColor = [63, 81, 181] as const;
+  const accentColor = [255, 193, 7] as const;
+  const successColor = [76, 175, 80] as const;
   const lightGray = [245, 245, 245] as const;
   const mediumGray = [158, 158, 158] as const;
   const darkGray = [66, 66, 66] as const;
@@ -490,12 +490,11 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
 
   let y = 20;
 
-  // HEADER SECTION WITH GRADIENT EFFECT
-  // Header background
+  // HEADER SECTION
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, 210, 50, "F");
 
-  // Hotel logo placeholder (decorative rectangle)
+  // Hotel logo
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(20, 12, 30, 25, 3, 3, "F");
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -506,7 +505,6 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   // Hotel name and receipt title
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
   doc.text("AZUREA HOTEL & RESORT", 110, 22, { align: "center" });
 
   doc.setFontSize(14);
@@ -515,19 +513,10 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
 
   // Hotel contact info
   doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  const hotelAddress =
-    bookingData.receipt_data?.hotel_info?.address ||
-    "123 Luxury Boulevard, Paradise City";
-  const hotelPhone =
-    bookingData.receipt_data?.hotel_info?.phone || "+63 (02) 123-4567";
-  const hotelEmail =
-    bookingData.receipt_data?.hotel_info?.email ||
-    "reservations@azureahotel.com";
-
-  doc.text(`${hotelAddress} | ${hotelPhone} | ${hotelEmail}`, 110, 41, {
-    align: "center",
-  });
+  const hotelAddress = bookingData.receipt_data?.hotel_info?.address || "Brgy. Dayap, Calauan, Laguna";
+  const hotelPhone = bookingData.receipt_data?.hotel_info?.phone || "+63 912 345 6789";
+  const hotelEmail = bookingData.receipt_data?.hotel_info?.email || "azureahotelmanagement@gmail.com";
+  doc.text(`${hotelAddress} | ${hotelPhone} | ${hotelEmail}`, 110, 41, { align: "center" });
 
   y = 65;
 
@@ -545,9 +534,7 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   // Receipt number
   doc.text("Receipt No:", 25, y + 12);
   doc.setFont("helvetica", "normal");
-  const receiptNumber =
-    bookingData.receipt_data?.receipt_number ||
-    `REC-${String(bookingData.id).padStart(6, "0")}`;
+  const receiptNumber = bookingData.receipt_data?.receipt_number || `REC-${String(bookingData.id).padStart(6, "0")}`;
   doc.text(receiptNumber, 55, y + 12);
 
   // Generation date
@@ -555,10 +542,7 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   doc.text("Generated:", 25, y + 22);
   doc.setFont("helvetica", "normal");
   const generatedDate = bookingData.receipt_data?.generated_at
-    ? format(
-        new Date(bookingData.receipt_data.generated_at),
-        "MMM dd, yyyy 'at' h:mm a"
-      )
+    ? format(new Date(bookingData.receipt_data.generated_at), "MMM dd, yyyy 'at' h:mm a")
     : format(new Date(), "MMM dd, yyyy 'at' h:mm a");
   doc.text(generatedDate, 55, y + 22);
 
@@ -583,8 +567,7 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   y = drawModernSectionHeader(doc, "GUEST INFORMATION", y, primaryColor);
 
   const user = bookingData.user;
-  const guestName =
-    `${user?.first_name || ""} ${user?.last_name || ""}`.trim() || "N/A";
+  const guestName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim() || "N/A";
 
   y = drawInfoRow(doc, "Guest Name", guestName, y);
   y = drawInfoRow(doc, "Email Address", user?.email || "N/A", y);
@@ -610,9 +593,7 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   y = drawInfoRow(doc, "Duration of Stay", bookingData.duration || "N/A", y);
 
   if (bookingData.number_of_guests) {
-    const guestText = `${bookingData.number_of_guests} guest${
-      bookingData.number_of_guests > 1 ? "s" : ""
-    }`;
+    const guestText = `${bookingData.number_of_guests} guest${bookingData.number_of_guests > 1 ? "s" : ""}`;
     y = drawInfoRow(doc, "Number of Guests", guestText, y);
   }
 
@@ -626,110 +607,84 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(66, 66, 66);
     const maxWidth = 140;
-    const requestLines = doc.splitTextToSize(
-      bookingData.special_request,
-      maxWidth
-    );
+    const requestLines = doc.splitTextToSize(bookingData.special_request, maxWidth);
     y += 5;
     requestLines.forEach((line: string, index: number) => {
       doc.text(line, 25, y + index * 5);
     });
-    y += requestLines.length * 5;
+    y += requestLines.length * 5 + 5;
   }
 
-  y += 15;
+  y += 10;
 
-  // PAYMENT SUMMARY SECTION
+  // PAYMENT SUMMARY SECTION - FIXED LAYOUT
   y = drawModernSectionHeader(doc, "PAYMENT SUMMARY", y, accentColor);
 
   const payment = bookingData.payment_breakdown;
-
-  // Enhanced payment table
   const tableStartY = y;
   const tableWidth = 170;
-  const headerHeight = 15;
-  const rowHeight = 12;
+  const headerHeight = 10;
+  const rowHeight = 10;
 
   // Table header
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(20, tableStartY, tableWidth, headerHeight, "F");
-
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("DESCRIPTION", 25, tableStartY + 10);
-  doc.text("AMOUNT", 165, tableStartY + 10, { align: "right" });
+  doc.text("DESCRIPTION", 25, tableStartY + 7);
+  doc.text("AMOUNT (₱)", 165, tableStartY + 7, { align: "right" });
 
   let currentRowY = tableStartY + headerHeight;
-  let rowCount = 0;
-
-  // Payment rows
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-
+  
+  // Down Payment row
   if (payment?.down_payment && payment.down_payment > 0) {
-    // Alternating row colors
-    if (rowCount % 2 === 0) {
-      doc.setFillColor(250, 250, 250);
-      doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
-    }
-    doc.text("Down Payment", 25, currentRowY + 8);
-    doc.text(
-      `₱${payment.down_payment.toLocaleString()}`,
-      185,
-      currentRowY + 8,
-      { align: "right" }
-    );
+    doc.setFillColor(255, 255, 255);
+    doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Down Payment", 25, currentRowY + 7);
+    doc.text(payment.down_payment.toLocaleString(), 185, currentRowY + 7, { align: "right" });
     currentRowY += rowHeight;
-    rowCount++;
   }
 
+  // Remaining Balance row
   if (payment?.remaining_balance && payment.remaining_balance > 0) {
-    if (rowCount % 2 === 0) {
-      doc.setFillColor(250, 250, 250);
-      doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
-    }
-    doc.text("Remaining Balance", 25, currentRowY + 8);
-    doc.text(
-      `₱${payment.remaining_balance.toLocaleString()}`,
-      185,
-      currentRowY + 8,
-      { align: "right" }
-    );
+    doc.setFillColor(248, 248, 248);
+    doc.rect(20, currentRowY, tableWidth, rowHeight, "F");
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Remaining Balance", 25, currentRowY + 7);
+    doc.text(payment.remaining_balance.toLocaleString(), 185, currentRowY + 7, { align: "right" });
     currentRowY += rowHeight;
-    rowCount++;
   }
 
-  // Total row with emphasis
+  // Total row
   doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.rect(20, currentRowY, tableWidth, rowHeight + 3, "F");
+  doc.rect(20, currentRowY, tableWidth, rowHeight + 5, "F");
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(1);
   doc.line(20, currentRowY, 190, currentRowY);
 
   doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("TOTAL AMOUNT PAID", 25, currentRowY + 10);
+  doc.text("TOTAL AMOUNT PAID", 25, currentRowY + 8);
   doc.text(
-    `₱${payment?.total_amount?.toLocaleString() || "0"}`,
+    (payment?.total_amount || 0).toLocaleString(),
     185,
-    currentRowY + 10,
+    currentRowY + 8,
     { align: "right" }
   );
 
   // Table border
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(1);
-  doc.rect(
-    20,
-    tableStartY,
-    tableWidth,
-    currentRowY - tableStartY + rowHeight + 3
-  );
+  doc.rect(20, tableStartY, tableWidth, currentRowY - tableStartY + rowHeight + 5);
 
-  y = currentRowY + rowHeight + 20;
+  y = currentRowY + rowHeight + 15;
 
   // Payment method and status
   doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -738,30 +693,30 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
   y = drawInfoRow(doc, "Payment Method", payment?.payment_method || "N/A", y);
   y = drawInfoRow(doc, "Payment Status", payment?.payment_status || "N/A", y);
 
-  y += 20;
+  // Add page break if needed
+  if (y > 250) {
+    doc.addPage();
+    y = 20;
+  } else {
+    y += 15;
+  }
 
-  // FOOTER SECTION
-  // Thank you message
+  // THANK YOU SECTION
   doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.roundedRect(20, y, 170, 25, 5, 5, "F");
-
+  doc.roundedRect(20, y, 170, 30, 5, 5, "F");
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("Thank you for choosing Azurea Hotel!", 105, y + 10, {
-    align: "center",
-  });
+  doc.text("Thank you for choosing Azurea Hotel!", 105, y + 10, { align: "center" });
 
   doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("We hope you enjoyed your stay with us!", 105, y + 18, {
-    align: "center",
-  });
+  doc.text("We hope you enjoyed your stay with us!", 105, y + 18, { align: "center" });
 
   y += 35;
 
-  // Legal disclaimer
+  // FOOTER
   doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
@@ -784,18 +739,11 @@ export const generateEReceipt = async (bookingData: any): Promise<void> => {
     { align: "center" }
   );
 
-  // Decorative footer border
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setLineWidth(2);
-  doc.line(20, y + 20, 190, y + 20);
-
-  // Save the PDF with improved filename
-  const fileName = `Azurea_E-Receipt_${String(bookingData.id).padStart(
-    6,
-    "0"
-  )}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+  // Save the PDF
+  const fileName = `Azurea_E-Receipt_${String(bookingData.id).padStart(6, "0")}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
   doc.save(fileName);
 };
+
 
 // Helper function for modern section headers
 const drawModernSectionHeader = (

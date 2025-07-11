@@ -667,7 +667,6 @@ def delete_amenity(request, pk):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def admin_bookings(request):
     try:
         exclude_statuses = [
