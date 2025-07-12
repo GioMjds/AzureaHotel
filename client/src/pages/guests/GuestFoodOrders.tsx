@@ -2,9 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { AlertTriangle, Calendar, ChefHat, Clock, Eye, MapPin, Package } from "lucide-react";
+import { useState } from "react";
+import ViewFoodOrderModal from "../../components/guests/ViewFoodOrderModal";
 import { fetchFoodOrders, FoodOrder } from "../../services/Food";
 
 const GuestFoodOrders = () => {
+    const [selectedOrderId, setSelectedOrderId] = useState<string | number | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+
     const { data: foodOrdersResponse, isLoading, error } = useQuery({
         queryKey: ['guestFoodOrders'],
         queryFn: () => fetchFoodOrders(),
@@ -134,79 +139,84 @@ const GuestFoodOrders = () => {
                         </div>
                     </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {foodOrders.map((order: FoodOrder, index: number) => (
-                            <motion.div
-                                key={order.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: index * 0.1 }}
-                                className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
-                            >
-                                <div className="p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-gray-600">Order</span>
-                                            <span className="text-sm font-bold text-emerald-600">
-                                                #{order.order_id}
-                                            </span>
-                                        </div>
-                                        <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(order.status)}`}>
-                                            {getStatusIcon(order.status)}
-                                            {order.status}
-                                        </div>
-                                    </div>
-
-                                    {order.booking_info && (
-                                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <MapPin className="w-4 h-4 text-gray-500" />
-                                                <span className="text-sm font-medium text-gray-700">
-                                                    {order.booking_info.is_venue_booking
-                                                        ? order.booking_info.area_name
-                                                        : order.booking_info.room_name
-                                                    }
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {foodOrders.map((order: FoodOrder, index: number) => (
+                                <motion.div
+                                    key={order.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+                                >
+                                    <div className="p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-medium text-gray-600">Order</span>
+                                                <span className="text-sm font-bold text-emerald-600">
+                                                    #{order.order_id}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                                                <Calendar className="w-3 h-3" />
-                                                <span>
-                                                    {formatDate(order.booking_info.check_in_date)} - {formatDate(order.booking_info.check_out_date)}
-                                                </span>
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(order.status)}`}>
+                                                {getStatusIcon(order.status)}
+                                                {order.status}
                                             </div>
                                         </div>
-                                    )}
 
-                                    <div className="space-y-2 mb-4">
-                                        {order.items.map((item, itemIndex) => (
-                                            <div key={itemIndex} className="flex justify-between items-center text-sm">
-                                                <div className="flex-1">
-                                                    <span className="font-medium text-gray-800">{item.name}</span>
-                                                    <span className="text-gray-600 ml-2">x{item.quantity}</span>
+                                        {order.booking_info && (
+                                            <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <MapPin className="w-4 h-4 text-gray-500" />
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        {order.booking_info.is_venue_booking
+                                                            ? order.booking_info.area_name
+                                                            : order.booking_info.room_name
+                                                        }
+                                                    </span>
                                                 </div>
-                                                <span className="font-medium text-gray-800">
-                                                    ₱{(item.price * item.quantity).toFixed(2)}
-                                                </span>
+                                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                                    <Calendar className="w-3 h-3" />
+                                                    <span>
+                                                        {formatDate(order.booking_info.check_in_date)} - {formatDate(order.booking_info.check_out_date)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        )}
 
-                                    <div className="border-t pt-3">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-sm font-medium text-gray-600">Total Amount</span>
-                                            <span className="text-lg font-bold text-emerald-600">
-                                                ₱{order.total_amount.toFixed(2)}
-                                            </span>
+                                        <div className="space-y-2 mb-4">
+                                            {order.items.map((item, itemIndex) => (
+                                                <div key={itemIndex} className="flex justify-between items-center text-sm">
+                                                    <span>{item.name} x{item.quantity}</span>
+                                                    <span>₱{(item.price * item.quantity).toFixed(2)}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <Clock className="w-3 h-3" />
-                                            <span>Ordered {formatDate(order.created_at)}</span>
+
+                                        <div className="border-t pt-3">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="font-semibold text-gray-700">Total:</span>
+                                                <span className="font-bold text-emerald-600">₱{order.total_amount.toFixed(2)}</span>
+                                            </div>
+                                            <button
+                                                className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded transition"
+                                                onClick={() => {
+                                                    setSelectedOrderId(order.order_id);
+                                                    setModalVisible(true);
+                                                }}
+                                            >
+                                                View Details
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                        <ViewFoodOrderModal
+                            orderId={selectedOrderId ?? ""}
+                            visible={modalVisible}
+                            onClose={() => setModalVisible(false)}
+                        />
+                    </>
                 )}
             </motion.div>
         </div>

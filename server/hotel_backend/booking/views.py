@@ -699,26 +699,30 @@ def generate_checkout_e_receipt(request, booking_id):
 @api_view(['GET'])
 def fetch_foods(request):
     try:
-        craveon_url = f"{os.getenv('FLASK_URL')}/api/menu"  # Update with actual URL
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        
-        response = requests.get(craveon_url, headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            return Response({
-                "message": "Food items fetched successfully",
-                "data": data.get('data'),
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                "error": f"Failed to fetch food items from CraveOn API. Status code: {response.status_code}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(f"Fetching CraveOn items")
+        items = CraveOnItem.objects.using('SystemInteg').filter(
+            is_archived=False
+        ).select_related('category')
+        print(f"Items found: {items.count()}")
+        data = []
+        for item in items:
+            image_base64 = ""
+            if item.image:
+                image_base64 = base64.b64encode(item.image).decode('utf-8')
+            data.append({
+                "item_id": item.item_id,
+                "name": item.item_name,
+                "price": float(item.price),
+                "image": image_base64,
+                "category_id": item.category.category_id if item.category else None,
+                "category_name": item.category.category_name if item.category else "",
+            })
+        return Response({
+            "message": "Food items fetched successfully.",
+            "data": data
+        }, status=status.HTTP_200_OK)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def place_food_order(request):
@@ -801,19 +805,18 @@ def place_food_order(request):
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def fetch_food_orders(request):
     try:
         booking_id = request.query_params.get('booking_id')
-
-        if not booking_id:
-            user_bookings = Bookings.objects.filter(
-                user=request.user,
-                has_food_order=True
-            ).order_by('-created_at')
-        else:
+        if booking_id:
             user_bookings = Bookings.objects.filter(
                 id=booking_id,
+                user=request.user,
+                has_food_order=True
+            )
+        else:
+            user_bookings = Bookings.objects.filter(
+                user=request.user,
                 has_food_order=True
             )
 
@@ -823,11 +826,10 @@ def fetch_food_orders(request):
             if not craveon_user:
                 continue
 
-            orders = []
             with connections['SystemInteg'].cursor() as cursor:
                 cursor.execute(
-                    "SELECT * FROM orders WHERE user_id = %s ORDER BY ordered_at DESC",
-                    [craveon_user.user_id]
+                    "SELECT * FROM orders WHERE user_id = %s AND booking_id = %s ORDER BY ordered_at DESC",
+                    [craveon_user.user_id, booking.id]
                 )
                 order_rows = cursor.fetchall()
                 columns = [col[0] for col in cursor.description]
@@ -862,14 +864,10 @@ def fetch_food_orders(request):
                         'check_out_date': booking.check_out_date,
                         'is_venue_booking': booking.is_venue_booking
                     }
-                    # Rename fields for frontend compatibility
                     order['order_id'] = order.pop('order_id')
                     order['total_amount'] = float(order['total_amount'])
                     order['created_at'] = order['ordered_at']
-                    orders.append(order)
-
-            all_orders.extend(orders)
-
+                    all_orders.append(order)
         return Response({
             "data": all_orders,
             "message": "Food orders fetched successfully"

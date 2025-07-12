@@ -38,10 +38,10 @@ export const fetchCraveOnFoods = async () => {
     const response = await booking.get("/fetch_foods", {
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
       },
+      withCredentials: true
     });
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error(`Failed to fetch food data from CraveOn: ${error}`);
     throw error;
@@ -53,10 +53,10 @@ export const placeFoodOrder = async (orderData: PlaceFoodOrderData) => {
     const response = await booking.post("/place_food_order", orderData, {
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
       },
+      withCredentials: true,
     });
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error(`Failed to place food order: ${error}`);
     throw error;
@@ -70,7 +70,6 @@ export const fetchFoodOrders = async (bookingId?: number) => {
       params,
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
       },
       withCredentials: true,
     });
