@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from user_roles.models import CraveOnUser
 from .models import Bookings, Transactions, Reviews, CraveOnCategory, CraveOnItem
 from user_roles.models import CustomUsers
 from user_roles.serializers import CustomUserSerializer
@@ -18,20 +17,6 @@ import base64
 PWD_SENIOR_DISCOUNT_PERCENT = 20
 
 # CraveOn Serializers
-class CraveOnUserSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = CraveOnUser
-        fields = [
-            'user_id', 'first_name', 'middle_name', 'last_name', 
-            'email', 'contact', 'address', 'status', 'is_archived', 
-            'user_img', 'full_name'
-        ]
-    
-    def get_full_name(self, obj):
-        return f"{obj.first_name} {obj.middle_name or ''} {obj.last_name}".strip()
-
 class CraveOnCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = CraveOnCategory

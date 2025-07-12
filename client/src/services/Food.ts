@@ -5,6 +5,7 @@ export interface FoodItem {
   name: string;
   price: number;
   image: string;
+  image_mime: string;
   quantity: number;
   category_id: number;
   category_name: string;
@@ -13,6 +14,7 @@ export interface FoodItem {
 export interface PlaceFoodOrderData {
   booking_id: number;
   items: FoodItem[];
+  payment_ss?: File;
 }
 
 export interface FoodOrder {
@@ -39,7 +41,7 @@ export const fetchCraveOnFoods = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      withCredentials: true
+      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -50,9 +52,23 @@ export const fetchCraveOnFoods = async () => {
 
 export const placeFoodOrder = async (orderData: PlaceFoodOrderData) => {
   try {
-    const response = await booking.post("/place_food_order", orderData, {
+    const formData = new FormData();
+    formData.append("booking_id", orderData.booking_id.toString());
+
+    // Backend expects 'items' as JSON string, not just 'items'
+    const itemsForBackend = orderData.items.map((item) => ({
+      item_id: item.item_id,
+      quantity: item.quantity,
+    }));
+    formData.append("items", JSON.stringify(itemsForBackend));
+
+    if (orderData.payment_ss) {
+      formData.append("payment_ss", orderData.payment_ss);
+    }
+
+    const response = await booking.post("/place_food_order", formData, {
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "multipart/form-data",
       },
       withCredentials: true,
     });

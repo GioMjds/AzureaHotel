@@ -14,7 +14,6 @@ const ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onC
     const { data, isLoading, error } = useQuery({
         queryKey: ['foodOrderDetails', orderId],
         queryFn: () => fetchFoodOrders(),
-        enabled: visible,
     });
 
     const order: FoodOrder | undefined = data?.data?.find((o: FoodOrder) => o.order_id === orderId);
@@ -26,7 +25,7 @@ const ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onC
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
                 >
                     <motion.div
                         initial={{ scale: 0.95, opacity: 0 }}

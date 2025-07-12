@@ -2,8 +2,7 @@ import jwt
 from django.conf import settings
 from datetime import datetime, timedelta
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
-from .models import Customer
+from .models import CraveOnUser
 
 def generate_customer_jwt(customer, token_type='access'):
     lifetime = timedelta(days=1) if token_type == 'access' else timedelta(days=7)

@@ -198,7 +198,7 @@ const GuestFoodOrders = () => {
                                                 <span className="font-bold text-emerald-600">₱{order.total_amount.toFixed(2)}</span>
                                             </div>
                                             <button
-                                                className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded transition"
+                                                className="mt-2 w-full cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded transition"
                                                 onClick={() => {
                                                     setSelectedOrderId(order.order_id);
                                                     setModalVisible(true);
@@ -212,7 +212,7 @@ const GuestFoodOrders = () => {
                             ))}
                         </div>
                         <ViewFoodOrderModal
-                            orderId={selectedOrderId ?? ""}
+                            orderId={selectedOrderId}
                             visible={modalVisible}
                             onClose={() => setModalVisible(false)}
                         />

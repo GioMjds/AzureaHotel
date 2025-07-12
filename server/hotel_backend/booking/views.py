@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .models import Bookings, Reviews, CraveOnCategory, CraveOnItem
+from .models import Bookings, Reviews, CraveOnItem
 from user_roles.models import CraveOnUser
 from property.models import Rooms, Areas
 from property.serializers import AreaSerializer, RoomSerializer
@@ -13,14 +13,12 @@ from .serializers import (
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
-from django.db import transaction, IntegrityError, connection, connections
+from django.db import transaction, connections
 from django.db.models import Q
-from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-import requests
-import json
-import os
 import base64
+import imghdr
+import json
 
 # Create your views here.
 @api_view(['GET'])
@@ -520,7 +518,7 @@ def user_reviews(request):
     reviews = Reviews.objects.filter(user=request.user).order_by('-created_at')
     serializer = ReviewSerializer(reviews, many=True)
     return Response({"data": serializer.data}, status=status.HTTP_200_OK)
-    
+
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def review_detail(request, review_id):
@@ -696,16 +694,17 @@ def generate_checkout_e_receipt(request, booking_id):
             "error": f"Failed to generate E-Receipt: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# CraveOn API endpoints
 @api_view(['GET'])
 def fetch_foods(request):
     try:
-        print(f"Fetching CraveOn items")
         items = CraveOnItem.objects.using('SystemInteg').filter(
             is_archived=False
         ).select_related('category')
-        print(f"Items found: {items.count()}")
         data = []
         for item in items:
+            image_type = imghdr.what(None, h=item.image)
+            mime_type = f"image/{image_type}"
             image_base64 = ""
             if item.image:
                 image_base64 = base64.b64encode(item.image).decode('utf-8')
@@ -714,6 +713,7 @@ def fetch_foods(request):
                 "name": item.item_name,
                 "price": float(item.price),
                 "image": image_base64,
+                "image_mime": mime_type,
                 "category_id": item.category.category_id if item.category else None,
                 "category_name": item.category.category_name if item.category else "",
             })
@@ -725,40 +725,40 @@ def fetch_foods(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def place_food_order(request):
     try:
         booking_id = request.data.get('booking_id')
-        cart_items = request.data.get('items', [])
+        cart_items_str = request.data.get('items', '[]')
         payment_ss = request.FILES.get('payment_ss')
 
-        booking = Bookings.objects.get(id=booking_id)
-        
         if not booking_id:
             return Response({"error": "Booking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            cart_items = json.loads(cart_items_str) if isinstance(cart_items_str, str) else cart_items_str
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid items format"}, status=status.HTTP_400_BAD_REQUEST)
+            
         if not cart_items:
             return Response({"error": "Cart items are required"}, status=status.HTTP_400_BAD_REQUEST)
         if not payment_ss:
             return Response({"error": "Payment screenshot is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            if booking.status.lower() != 'checked_in':
-                return Response({"error": "Food orders can only be placed for checked-in bookings"}, status=status.HTTP_400_BAD_REQUEST)
+            booking = Bookings.objects.get(id=booking_id)
         except Bookings.DoesNotExist:
             return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Find or create CraveOn user based on email
-        craveon_user = CraveOnUser.objects.using('SystemInteg').filter(email=booking.user.email).first()
-        if not craveon_user:
-            craveon_user = CraveOnUser.objects.using('SystemInteg').create(
-                first_name=booking.user.first_name,
-                last_name=booking.user.last_name,
-                email=booking.user.email,
-                contact=booking.user.phone_number or '',
-                address='',
-                password='',
-                status='Active'
-            )
+        # Check booking status
+        if booking.status.lower() != 'checked_in':
+            return Response({
+                "error": "Food orders can only be placed for checked-in bookings"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
+        hotel_user = request.user
+
+        # Validate cart items and calculate total
         total_amount = 0
         for item in cart_items:
             craveon_item = CraveOnItem.objects.using('SystemInteg').filter(item_id=item.get('item_id')).first()
@@ -766,47 +766,63 @@ def place_food_order(request):
                 return Response({"error": f"Item with ID {item.get('item_id')} not found."}, status=status.HTTP_400_BAD_REQUEST)
             total_amount += float(craveon_item.price) * int(item.get('quantity', 1))
 
-        # Read payment screenshot as base64 string
-        payment_ss_data = base64.b64encode(payment_ss.read()).decode('utf-8')
+        try:
+            payment_ss_data = base64.b64encode(payment_ss.read()).decode('utf-8')
+        except Exception as e:
+            return Response({
+                "error": f"Failed to process payment screenshot: {str(e)}"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create order and order_items in a transaction
         with transaction.atomic(using='SystemInteg'):
-            # Insert into orders
             cursor = connections['SystemInteg'].cursor()
+            
             cursor.execute(
-                "INSERT INTO orders (user_id, total_amount, status, payment_ss, ordered_at) VALUES (%s, %s, %s, %s, NOW())",
-                [craveon_user.user_id, total_amount, 'Pending', payment_ss_data]
+                """INSERT INTO orders (customer_id, total_amount, status, payment_ss, ordered_at, booking_id, 
+                    guest_name, guest_email, hotel_room_area) 
+                    VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s, %s)""",
+                [
+                    hotel_user.id,
+                    total_amount, 
+                    'Pending', 
+                    payment_ss_data, 
+                    booking_id,
+                    f"{hotel_user.first_name} {hotel_user.last_name}",
+                    hotel_user.email,
+                    booking.room.room_name if booking.room else (booking.area.area_name if booking.area else "Unknown")
+                ]
             )
             order_id = cursor.lastrowid
 
-            # Insert order_items
+            # Insert order items
             for item in cart_items:
                 cursor.execute(
                     "INSERT INTO order_items (order_id, item_id, quantity) VALUES (%s, %s, %s)",
                     [order_id, item.get('item_id'), item.get('quantity', 1)]
                 )
 
-        # Mark booking as having a food order
         booking.has_food_order = True
         booking.save()
 
         return Response({
-            "message": "Food order placed successfully",
+            "customer_id": hotel_user.id,
             "order_id": order_id,
             "booking_id": booking.id,
             "items": cart_items,
+            "total_amount": total_amount,
             "hotel_guest_info": {
                 "booking_id": booking_id,
-                "guest_name": f"{booking.user.first_name} {booking.user.last_name}",
+                "guest_name": f"{hotel_user.first_name} {hotel_user.last_name}",
+                "guest_email": hotel_user.email,
+                "room_or_area": booking.room.room_name if booking.room else (booking.area.area_name if booking.area else "Unknown"),
             },
-        }, status=status.HTTP_200_OK)
-
+        }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fetch_food_orders(request):
-    try:
+    try:        
         booking_id = request.query_params.get('booking_id')
         if booking_id:
             user_bookings = Bookings.objects.filter(
@@ -822,39 +838,38 @@ def fetch_food_orders(request):
 
         all_orders = []
         for booking in user_bookings:
-            craveon_user = CraveOnUser.objects.using('SystemInteg').filter(email=booking.user.email).first()
-            if not craveon_user:
-                continue
-
             with connections['SystemInteg'].cursor() as cursor:
                 cursor.execute(
-                    "SELECT * FROM orders WHERE user_id = %s AND booking_id = %s ORDER BY ordered_at DESC",
-                    [craveon_user.user_id, booking.id]
+                    "SELECT * FROM orders WHERE booking_id = %s ORDER BY ordered_at DESC",
+                    [booking.id]
                 )
                 order_rows = cursor.fetchall()
                 columns = [col[0] for col in cursor.description]
-
                 for order_row in order_rows:
                     order = dict(zip(columns, order_row))
-                    # Fetch order items
+                    
                     cursor.execute(
                         """
-                        SELECT oi.*, i.item_name AS name, i.price
-                        FROM order_items oi
-                        JOIN items i ON oi.item_id = i.item_id
-                        WHERE oi.order_id = %s
+                        SELECT oi.order_item_id, oi.order_id, oi.item_id, oi.quantity, 
+                                i.item_name AS name, i.price
+                                FROM order_items oi
+                                JOIN items i ON oi.item_id = i.item_id
+                                WHERE oi.order_id = %s
                         """,
                         [order['order_id']]
                     )
-                    items = [
-                        {
+                    item_rows = cursor.fetchall()
+                    
+                    items = []
+                    for item_row in item_rows:
+                        items.append({
+                            "order_item_id": item_row[0],
+                            "order_id": item_row[1], 
                             "item_id": item_row[2],
-                            "name": item_row[5],
-                            "price": float(item_row[6]),
-                            "quantity": item_row[3]
-                        }
-                        for item_row in cursor.fetchall()
-                    ]
+                            "quantity": item_row[3],
+                            "name": item_row[4],
+                            "price": float(item_row[5])
+                        })                    
                     order['items'] = items
                     order['booking_info'] = {
                         'id': booking.id,
@@ -864,13 +879,13 @@ def fetch_food_orders(request):
                         'check_out_date': booking.check_out_date,
                         'is_venue_booking': booking.is_venue_booking
                     }
-                    order['order_id'] = order.pop('order_id')
+                    order['id'] = order['order_id']
                     order['total_amount'] = float(order['total_amount'])
                     order['created_at'] = order['ordered_at']
                     all_orders.append(order)
+        
         return Response({
             "data": all_orders,
-            "message": "Food orders fetched successfully"
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({
