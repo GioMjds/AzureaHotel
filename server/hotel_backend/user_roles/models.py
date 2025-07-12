@@ -103,5 +103,5 @@ class CraveOnUser(models.Model):
 
     class Meta:
         managed = False  # Don't let Django manage this table
-        db_table = 'craveon_users'
+        db_table = 'users'
         app_label = 'craveon'  # Use a separate app label for routing

@@ -1,7 +1,8 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .models import Bookings, Reviews
+from .models import Bookings, Reviews, CraveOnCategory, CraveOnItem
+from user_roles.models import CraveOnUser
 from property.models import Rooms, Areas
 from property.serializers import AreaSerializer, RoomSerializer
 from .serializers import (
@@ -12,11 +13,14 @@ from .serializers import (
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
+from django.db import transaction, IntegrityError, connection, connections
 from django.db.models import Q
+from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import requests
 import json
 import os
+import base64
 
 # Create your views here.
 @api_view(['GET'])
@@ -706,8 +710,8 @@ def fetch_foods(request):
         if response.status_code == 200:
             data = response.json()
             return Response({
-                "data": data.get('data', {}),
-                "message": "Food items fetched successfully"
+                "message": "Food items fetched successfully",
+                "data": data.get('data'),
             }, status=status.HTTP_200_OK)
         else:
             return Response({
@@ -721,177 +725,155 @@ def place_food_order(request):
     try:
         booking_id = request.data.get('booking_id')
         cart_items = request.data.get('items', [])
+        payment_ss = request.FILES.get('payment_ss')
+
+        booking = Bookings.objects.get(id=booking_id)
         
         if not booking_id:
-            return Response({
-                "error": "Booking ID is required"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({"error": "Booking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
         if not cart_items:
-            return Response({
-                "error": "Cart items are required"
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
+            return Response({"error": "Cart items are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not payment_ss:
+            return Response({"error": "Payment screenshot is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            booking = Bookings.objects.get(id=booking_id)
             if booking.status.lower() != 'checked_in':
-                return Response({
-                    "error": "Food orders can only be placed for checked-in bookings"
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Food orders can only be placed for checked-in bookings"}, status=status.HTTP_400_BAD_REQUEST)
         except Bookings.DoesNotExist:
-            return Response({
-                "error": "Booking not found"
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Call CraveOn API
-        craveon_url = f"{os.getenv('FLASK_URL')}/api/checkout"  # Update with actual URL
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        
-        payload = {
-            "items": [
-                {
-                    "item_id": item.get('item_id'),
-                    "quantity": item.get('quantity')
-                }
-                for item in cart_items
-            ],
+            return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Find or create CraveOn user based on email
+        craveon_user = CraveOnUser.objects.using('SystemInteg').filter(email=booking.user.email).first()
+        if not craveon_user:
+            craveon_user = CraveOnUser.objects.using('SystemInteg').create(
+                first_name=booking.user.first_name,
+                last_name=booking.user.last_name,
+                email=booking.user.email,
+                contact=booking.user.phone_number or '',
+                address='',
+                password='',
+                status='Active'
+            )
+
+        total_amount = 0
+        for item in cart_items:
+            craveon_item = CraveOnItem.objects.using('SystemInteg').filter(item_id=item.get('item_id')).first()
+            if not craveon_item:
+                return Response({"error": f"Item with ID {item.get('item_id')} not found."}, status=status.HTTP_400_BAD_REQUEST)
+            total_amount += float(craveon_item.price) * int(item.get('quantity', 1))
+
+        # Read payment screenshot as base64 string
+        payment_ss_data = base64.b64encode(payment_ss.read()).decode('utf-8')
+
+        # Create order and order_items in a transaction
+        with transaction.atomic(using='SystemInteg'):
+            # Insert into orders
+            cursor = connections['SystemInteg'].cursor()
+            cursor.execute(
+                "INSERT INTO orders (user_id, total_amount, status, payment_ss, ordered_at) VALUES (%s, %s, %s, %s, NOW())",
+                [craveon_user.user_id, total_amount, 'Pending', payment_ss_data]
+            )
+            order_id = cursor.lastrowid
+
+            # Insert order_items
+            for item in cart_items:
+                cursor.execute(
+                    "INSERT INTO order_items (order_id, item_id, quantity) VALUES (%s, %s, %s)",
+                    [order_id, item.get('item_id'), item.get('quantity', 1)]
+                )
+
+        # Mark booking as having a food order
+        booking.has_food_order = True
+        booking.save()
+
+        return Response({
+            "message": "Food order placed successfully",
+            "order_id": order_id,
+            "booking_id": booking.id,
+            "items": cart_items,
             "hotel_guest_info": {
                 "booking_id": booking_id,
                 "guest_name": f"{booking.user.first_name} {booking.user.last_name}",
-                "guest_email": booking.user.email,
-            }
-        }
-        
-        response = requests.post(craveon_url, data=json.dumps(payload), headers=headers)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('success'):
-                craveon_order_id = result.get('order_id')
-                booking.has_food_order = True
-                booking.save()
-                return Response({
-                    "message": "Food order placed successfully",
-                    "order_id": craveon_order_id,
-                    "booking_id": booking.id,
-                    "items": payload['items'],
-                }, status=status.HTTP_200_OK)
-            return Response({
-                "error": result.get('message', 'Failed to place order')
-            }, status=status.HTTP_400_BAD_REQUEST)
+            },
+        }, status=status.HTTP_200_OK)
 
-        return Response({
-            "error": f"Food ordering service error: {response.status_code} - {response.text}"
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
-        return Response({
-            "error": f"Unexpected error: {str(e)}"
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+        return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def fetch_food_orders(request):
     try:
         booking_id = request.query_params.get('booking_id')
-        
+
         if not booking_id:
-            # If no booking_id provided, get all food orders for the user
             user_bookings = Bookings.objects.filter(
                 user=request.user,
                 has_food_order=True
             ).order_by('-created_at')
-            
-            all_orders = []
-            for booking in user_bookings:
-                try:
-                    craveon_url = f"{os.getenv('FLASK_URL')}/api/orders/{booking.id}"
-                    headers = {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+        else:
+            user_bookings = Bookings.objects.filter(
+                id=booking_id,
+                has_food_order=True
+            )
+
+        all_orders = []
+        for booking in user_bookings:
+            craveon_user = CraveOnUser.objects.using('SystemInteg').filter(email=booking.user.email).first()
+            if not craveon_user:
+                continue
+
+            orders = []
+            with connections['SystemInteg'].cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM orders WHERE user_id = %s ORDER BY ordered_at DESC",
+                    [craveon_user.user_id]
+                )
+                order_rows = cursor.fetchall()
+                columns = [col[0] for col in cursor.description]
+
+                for order_row in order_rows:
+                    order = dict(zip(columns, order_row))
+                    # Fetch order items
+                    cursor.execute(
+                        """
+                        SELECT oi.*, i.item_name AS name, i.price
+                        FROM order_items oi
+                        JOIN items i ON oi.item_id = i.item_id
+                        WHERE oi.order_id = %s
+                        """,
+                        [order['order_id']]
+                    )
+                    items = [
+                        {
+                            "item_id": item_row[2],
+                            "name": item_row[5],
+                            "price": float(item_row[6]),
+                            "quantity": item_row[3]
+                        }
+                        for item_row in cursor.fetchall()
+                    ]
+                    order['items'] = items
+                    order['booking_info'] = {
+                        'id': booking.id,
+                        'room_name': booking.room.room_name if booking.room else None,
+                        'area_name': booking.area.area_name if booking.area else None,
+                        'check_in_date': booking.check_in_date,
+                        'check_out_date': booking.check_out_date,
+                        'is_venue_booking': booking.is_venue_booking
                     }
-                    
-                    response = requests.get(craveon_url, headers=headers)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        orders = data.get('data', [])
-                        for order in orders:
-                            order['booking_info'] = {
-                                'id': booking.id,
-                                'room_name': booking.room.name if booking.room else None,
-                                'area_name': booking.area.name if booking.area else None,
-                                'check_in_date': booking.check_in_date,
-                                'check_out_date': booking.check_out_date,
-                                'is_venue_booking': booking.is_venue_booking
-                            }
-                        all_orders.extend(orders)
-                except Exception as e:
-                    print(f"Error fetching orders for booking {booking.id}: {str(e)}")
-                    continue
-            
-            return Response({
-                "data": all_orders,
-                "message": "Food orders fetched successfully"
-            }, status=status.HTTP_200_OK)
-        
-        try:
-            booking = Bookings.objects.get(id=booking_id)
-            
-            # Check if user has permission to view this booking
-            if request.user.role == 'guest' and booking.user != request.user:
-                return Response({
-                    "error": "You don't have permission to view this booking's food orders"
-                }, status=status.HTTP_403_FORBIDDEN)
-            
-            if not booking.has_food_order:
-                return Response({
-                    "data": [],
-                    "message": "No food orders found for this booking"
-                }, status=status.HTTP_200_OK)
-        except Bookings.DoesNotExist:
-            return Response({
-                "error": "Booking not found"
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        craveon_url = f"{os.getenv('FLASK_URL')}/api/orders/{booking_id}"
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        
-        response = requests.get(craveon_url, headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            orders = data.get('data', [])
-            
-            # Add booking info to each order
-            for order in orders:
-                order['booking_info'] = {
-                    'id': booking.id,
-                    'room_name': booking.room.name if booking.room else None,
-                    'area_name': booking.area.name if booking.area else None,
-                    'check_in_date': booking.check_in_date,
-                    'check_out_date': booking.check_out_date,
-                    'is_venue_booking': booking.is_venue_booking
-                }
-            
-            return Response({
-                "data": orders,
-                "message": "Food orders fetched successfully"
-            }, status=status.HTTP_200_OK)
-        elif response.status_code == 404:
-            return Response({
-                "data": [],
-                "message": "No food orders found for this booking"
-            }, status=status.HTTP_200_OK)
-        
+                    # Rename fields for frontend compatibility
+                    order['order_id'] = order.pop('order_id')
+                    order['total_amount'] = float(order['total_amount'])
+                    order['created_at'] = order['ordered_at']
+                    orders.append(order)
+
+            all_orders.extend(orders)
+
         return Response({
-            "error": f"Failed to fetch food orders from CraveOn API. Status code: {response.status_code}"
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            "data": all_orders,
+            "message": "Food orders fetched successfully"
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({
             "error": f"Failed to fetch food orders: {str(e)}"

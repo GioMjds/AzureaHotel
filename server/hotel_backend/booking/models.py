@@ -7,28 +7,6 @@ from property.models import Rooms, Areas
 
 User = get_user_model()
 
-# CraveOn User model for accessing remote database
-class CraveOnUser(models.Model):
-    user_id = models.AutoField(primary_key=True)
-    first_name = models.CharField(max_length=100)
-    middle_name = models.CharField(max_length=100, null=True, blank=True)
-    last_name = models.CharField(max_length=100)
-    email = models.CharField(max_length=100)
-    contact = models.CharField(max_length=11)
-    address = models.TextField()
-    password = models.CharField(max_length=100)
-    is_archived = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, default='Active')
-    user_img = models.TextField(null=True, blank=True)
-
-    class Meta:
-        managed = False  # Don't let Django manage this table
-        db_table = 'users'
-        app_label = 'booking'
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-
 # Create your models here.
 class Bookings(models.Model):
     BOOKING_STATUS_CHOICES = [
@@ -164,7 +142,7 @@ class CraveOnCategory(models.Model):
     class Meta:
         managed = False
         db_table = 'categories'
-        app_label = 'booking'
+        app_label = 'craveon'
 
     def __str__(self):
         return self.category_name
@@ -181,7 +159,7 @@ class CraveOnItem(models.Model):
     class Meta:
         managed = False
         db_table = 'items'
-        app_label = 'booking'
+        app_label = 'craveon'
 
     def __str__(self):
         return self.item_name

@@ -173,6 +173,7 @@ AUTHENTICATION_BACKENDS = [
 
 DATABASE_ROUTERS = [
     'user_roles.routers.SecondDbRouter',
+    'booking.routers.CraveOnRouter',
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

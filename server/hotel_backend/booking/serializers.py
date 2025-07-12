@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Bookings, Transactions, Reviews, CraveOnUser, CraveOnCategory, CraveOnItem
+from user_roles.models import CraveOnUser
+from .models import Bookings, Transactions, Reviews, CraveOnCategory, CraveOnItem
 from user_roles.models import CustomUsers
 from user_roles.serializers import CustomUserSerializer
 from property.models import Rooms, Areas
