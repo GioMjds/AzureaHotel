@@ -47,7 +47,11 @@ CREATE TABLE orders(
 	payment_ss LONGTEXT NULL,
 	cancellation_reason TEXT,
 	ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+	booking_id INT NULL,
+	guest_name VARCHAR(100) NULL,
+	guest_email VARCHAR(100) NULL UNIQUE,
+	hotel_room_area VARCHAR(100) NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
 );
 
 CREATE TABLE order_items(

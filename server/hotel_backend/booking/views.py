@@ -19,6 +19,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import base64
 import imghdr
 import json
+import json
 
 # Create your views here.
 @api_view(['GET'])
@@ -175,7 +176,7 @@ def booking_detail(request, booking_id):
             "data": data
         }, status=status.HTTP_200_OK)
     elif request.method == 'PUT':
-        serializer = BookingSerializer(booking, data=request.data)
+        serializer = BookingSerializer(booking, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({
@@ -775,6 +776,26 @@ def place_food_order(request):
 
         with transaction.atomic(using='SystemInteg'):
             cursor = connections['SystemInteg'].cursor()
+
+            print(f"🔍 [CUSTOMER CHECK] Checking if user ID {hotel_user.id} exists in CraveOn customers table...")
+            cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", [hotel_user.id])
+            craveon_user = cursor.fetchone()
+            
+            if not craveon_user:
+                cursor.execute(
+                    """ INSERT INTO customers (customer_id, full_name, email, contact, address, password, is_archived, status) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                    [
+                        hotel_user.id,
+                        f"{hotel_user.first_name} {hotel_user.last_name}",
+                        hotel_user.email,
+                        '00000000000',
+                        'Hotel Guest - Synced Account',
+                        'hotel_guest_sync',
+                        False,
+                        'Active'
+                    ]
+                )
             
             cursor.execute(
                 """INSERT INTO orders (customer_id, total_amount, status, payment_ss, ordered_at, booking_id, 
