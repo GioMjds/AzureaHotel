@@ -309,7 +309,10 @@ export const restoreUser = async (userId: number) => {
   }
 };
 
-export const approveValidId = async (userId: number, isSeniorOrPwd: boolean) => {
+export const approveValidId = async (
+  userId: number,
+  isSeniorOrPwd: boolean
+) => {
   try {
     const response = await ADMIN.put(
       `/approve_valid_id/${userId}`,
@@ -618,13 +621,17 @@ export const getBookingDetails = async (bookingId: number) => {
   }
 };
 
-export const getAllBookings = async (page: number, pageSize: number, status?: string) => {
+export const getAllBookings = async (
+  page: number,
+  pageSize: number,
+  status?: string
+) => {
   try {
     const response = await ADMIN.get("/bookings", {
       params: {
         page: String(page),
         page_size: String(pageSize),
-        status: status
+        status: status,
       },
       withCredentials: true,
     });
@@ -838,6 +845,115 @@ export const fetchMonthlyRevenue = async (month: number, year: number) => {
     };
   } catch (error) {
     console.error(`Failed to fetch monthly revenue:`, error);
+    throw error;
+  }
+};
+
+// Commission Tracking APIs
+export const fetchCommissionStats = async (
+  filter = "month",
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    const params: any = { filter };
+    if (filter === "custom" && startDate && endDate) {
+      params.start_date = startDate;
+      params.end_date = endDate;
+    }
+
+    const response = await ADMIN.get("/commission-stats", {
+      params,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching commission stats:", error);
+    throw error;
+  }
+};
+
+export const fetchCommissionDailyData = async (month: number, year: number) => {
+  try {
+    const response = await ADMIN.get("/commission-daily-data", {
+      params: { month, year },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching commission daily data:", error);
+    throw error;
+  }
+};
+
+export const fetchCommissionByRoom = async (
+  filter = "month",
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    const params: any = { filter };
+    if (filter === "custom" && startDate && endDate) {
+      params.start_date = startDate;
+      params.end_date = endDate;
+    }
+
+    const response = await ADMIN.get("/commission-by-room", {
+      params,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching commission by room:", error);
+    throw error;
+  }
+};
+
+export const fetchCommissionDetailedOrders = async (
+  page: number = 1,
+  pageSize: number = 20,
+  filter = "month",
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    const params: any = { page, page_size: pageSize, filter };
+    if (filter === "custom" && startDate && endDate) {
+      params.start_date = startDate;
+      params.end_date = endDate;
+    }
+
+    const response = await ADMIN.get("/commission-detailed-orders", {
+      params,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching commission detailed orders:", error);
+    throw error;
+  }
+};
+
+export const fetchTopCommissionRooms = async (
+  limit: number = 10,
+  filter = "month",
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    const params: any = { limit, filter };
+    if (filter === "custom" && startDate && endDate) {
+      params.start_date = startDate;
+      params.end_date = endDate;
+    }
+
+    const response = await ADMIN.get("/top-commission-rooms", {
+      params,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching top commission rooms:", error);
     throw error;
   }
 };

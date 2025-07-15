@@ -1,6 +1,3 @@
-# CraveOn Integration Helper
-# This module helps manage the integration between the hotel booking system and CraveOn food ordering system
-
 from django.db import connections
 from .models import CraveOnItem
 from typing import Dict, Any
@@ -9,10 +6,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 class CraveOnIntegration:
-    """
-    Helper class to manage CraveOn database operations without compromising existing schema
-    """
-    
     @staticmethod
     def get_or_create_craveon_user(hotel_user, booking) -> int:
         """
@@ -165,3 +158,82 @@ class CraveOnIntegration:
                 'items': [],
                 'item_count': 0
             }
+
+    @staticmethod
+    def get_order_details(order_id: int) -> Dict[str, Any]:
+        """
+        Get detailed information about a CraveOn order.
+        """
+        cursor = connections['SystemInteg'].cursor()
+        
+        try:
+            cursor.execute("""
+                SELECT o.order_id, o.user_id, o.total_amount, o.status, 
+                       o.payment_submitted, o.reviewed, o.ordered_at,
+                       o.booking_id, o.hotel_room_area, o.guest_email, o.guest_name
+                FROM orders o 
+                WHERE o.order_id = %s
+            """, [order_id])
+            
+            result = cursor.fetchone()
+            if not result:
+                return {'found': False, 'error': 'Order not found'}
+            
+            order_data = {
+                'found': True,
+                'order_id': result[0],
+                'user_id': result[1],
+                'total_amount': float(result[2]),
+                'status': result[3],
+                'payment_submitted': result[4],
+                'reviewed': result[5],
+                'ordered_at': result[6],
+                'booking_id': result[7],
+                'hotel_room_area': result[8],
+                'guest_email': result[9],
+                'guest_name': result[10]
+            }
+            
+            # Get order items
+            cursor.execute("""
+                SELECT oi.item_id, oi.quantity, i.item_name, i.price
+                FROM order_items oi
+                JOIN items i ON oi.item_id = i.item_id
+                WHERE oi.order_id = %s
+            """, [order_id])
+            
+            order_data['items'] = []
+            for item_row in cursor.fetchall():
+                order_data['items'].append({
+                    'item_id': item_row[0],
+                    'quantity': item_row[1],
+                    'item_name': item_row[2],
+                    'price': float(item_row[3]),
+                    'item_total': float(item_row[3]) * item_row[1]
+                })
+            
+            return order_data
+            
+        except Exception as e:
+            logger.error(f"Error getting order details: {str(e)}")
+            return {'found': False, 'error': str(e)}
+
+    @staticmethod
+    def update_order_status(order_id: int, new_status: str) -> bool:
+        """
+        Update the status of a CraveOn order.
+        """
+        cursor = connections['SystemInteg'].cursor()
+        
+        try:
+            cursor.execute("""
+                UPDATE orders 
+                SET status = %s 
+                WHERE order_id = %s
+            """, [new_status, order_id])
+            
+            return cursor.rowcount > 0
+            
+        except Exception as e:
+            logger.error(f"Error updating order status: {str(e)}")
+            return False

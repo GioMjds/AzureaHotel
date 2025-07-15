@@ -163,3 +163,66 @@ class CraveOnItem(models.Model):
 
     def __str__(self):
         return self.item_name
+
+# CraveOn Orders model
+class CraveOnOrder(models.Model):
+    ORDER_STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Processing', 'Processing'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+        ('Reviewed', 'Reviewed'),
+    ]
+    
+    order_id = models.AutoField(primary_key=True)
+    user_id = models.IntegerField()  # References CraveOn users table
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='Pending')
+    payment_ss = models.TextField(null=True, blank=True)
+    payment_submitted = models.BooleanField(default=False)
+    reviewed = models.BooleanField(default=False)
+    cancellation_reason = models.TextField(null=True, blank=True)
+    ordered_at = models.DateTimeField(auto_now_add=True)
+    booking_id = models.IntegerField(null=True, blank=True)  # References hotel booking
+    hotel_room_area = models.CharField(max_length=100, null=True, blank=True)
+    guest_email = models.CharField(max_length=100, null=True, blank=True)
+    guest_name = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'orders'
+        app_label = 'craveon'
+
+    def __str__(self):
+        return f"Order {self.order_id} - {self.guest_name} - {self.status}"
+
+# CraveOn Order Items model
+class CraveOnOrderItem(models.Model):
+    order_item_id = models.AutoField(primary_key=True)
+    order_id = models.IntegerField()  # References CraveOn orders table
+    item_id = models.IntegerField()   # References CraveOn items table
+    quantity = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'order_items'
+        app_label = 'craveon'
+
+    def __str__(self):
+        return f"Order {self.order_id} - Item {self.item_id} - Qty: {self.quantity}"
+
+# CraveOn Reviews model
+class CraveOnReview(models.Model):
+    id = models.AutoField(primary_key=True)
+    order_id = models.IntegerField()  # References CraveOn orders table
+    rating = models.IntegerField()
+    comment = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'reviews'
+        app_label = 'craveon'
+
+    def __str__(self):
+        return f"Review for Order {self.order_id} - Rating: {self.rating}"

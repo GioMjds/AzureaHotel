@@ -1,10 +1,10 @@
 import json
 import base64
+import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from .models import Bookings, Reviews, CraveOnItem
-from user_roles.models import CraveOnUser
 from property.models import Rooms, Areas
 from property.serializers import AreaSerializer, RoomSerializer
 from .serializers import (
@@ -19,10 +19,13 @@ from django.db import transaction, connections
 from django.db.models import Q
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .craveon_integration import CraveOnIntegration
+from .serializers import CraveOnReviewSerializer
 import base64
 import imghdr
 import json
 import json
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 @api_view(['GET'])
@@ -885,4 +888,166 @@ def fetch_food_orders(request):
     except Exception as e:
         return Response({
             "error": f"Failed to fetch food orders: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def review_food_order(request):
+    try:
+        order_id = request.data.get('order_id')
+        if not order_id:
+            return Response({
+                'error': 'Order ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        cursor = connections['SystemInteg'].cursor()
+        cursor.execute("""
+            SELECT guest_email, status, guest_name, total_amount, hotel_room_area 
+            FROM orders 
+            WHERE order_id = %s
+        """, [order_id])
+        
+        order_result = cursor.fetchone()
+        if not order_result:
+            return Response({
+                'error': 'Order not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        guest_email, guest_name, total_amount, hotel_room_area = order_result
+        
+        if guest_email != request.user.email:
+            return Response({
+                'error': 'You can only review your own orders'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = CraveOnReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            rating = serializer.validated_data.get('rating')
+            comment = serializer.validated_data.get('comment', '')
+            
+            cursor.execute("""
+                INSERT INTO reviews (order_id, rating, comment, created_at)
+                VALUES (%s, %s, %s, NOW())
+            """, [order_id, rating, comment])
+            
+            cursor.execute("""
+                UPDATE orders 
+                SET status = 'Reviewed', reviewed = TRUE 
+                WHERE order_id = %s
+            """, [order_id])
+            
+            review_id = cursor.lastrowid
+            
+            return Response({
+                'success': True,
+                'message': 'Food order review submitted successfully',
+                'review': {
+                    'id': review_id,
+                    'order_id': order_id,
+                    'rating': rating,
+                    'comment': comment,
+                    'order_details': {
+                        'guest_name': guest_name,
+                        'total_amount': float(total_amount),
+                        'hotel_room_area': hotel_room_area,
+                        'status': 'Reviewed'
+                    }
+                }
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'error': 'Invalid review data',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        logger.error(f"Error in review_food_order: {str(e)}")
+        return Response({
+            'error': f"Failed to review food order: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_food_order_reviews(request):
+    try:
+        cursor = connections['SystemInteg'].cursor()
+        cursor.execute("""
+            SELECT r.id, r.order_id, r.rating, r.comment, r.created_at,
+                    o.total_amount, o.guest_name, o.hotel_room_area, o.ordered_at
+            FROM reviews r
+            JOIN orders o ON r.order_id = o.order_id
+            WHERE o.guest_email = %s
+            ORDER BY r.created_at DESC
+        """, [request.user.email])
+        
+        reviews = []
+        for row in cursor.fetchall():
+            reviews.append({
+                'id': row[0],
+                'order_id': row[1],
+                'rating': row[2],
+                'comment': row[3],
+                'created_at': row[4],
+                'order_details': {
+                    'total_amount': float(row[5]),
+                    'guest_name': row[6],
+                    'hotel_room_area': row[7],
+                    'ordered_at': row[8]
+                }
+            })
+        
+        return Response({
+            'success': True,
+            'reviews': reviews,
+            'count': len(reviews)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in get_user_food_order_reviews: {str(e)}")
+        return Response({
+            'error': f"Failed to fetch food order reviews: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_reviewable_food_orders(request):
+    """
+    Get all completed food orders that haven't been reviewed yet for the authenticated user.
+    """
+    try:
+        from django.db import connections
+        
+        cursor = connections['SystemInteg'].cursor()
+        cursor.execute("""
+            SELECT o.order_id, o.total_amount, o.guest_name, o.hotel_room_area, 
+                   o.ordered_at, o.status
+            FROM orders o
+            LEFT JOIN reviews r ON o.order_id = r.order_id
+            WHERE o.guest_email = %s 
+            AND o.status = 'Completed' 
+            AND r.id IS NULL
+            ORDER BY o.ordered_at DESC
+        """, [request.user.email])
+        
+        orders = []
+        for row in cursor.fetchall():
+            orders.append({
+                'order_id': row[0],
+                'total_amount': float(row[1]),
+                'guest_name': row[2],
+                'hotel_room_area': row[3],
+                'ordered_at': row[4],
+                'status': row[5]
+            })
+        
+        return Response({
+            'success': True,
+            'reviewable_orders': orders,
+            'count': len(orders)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in get_reviewable_food_orders: {str(e)}")
+        return Response({
+            'error': f"Failed to fetch reviewable food orders: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

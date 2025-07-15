@@ -10,7 +10,7 @@ interface ViewFoodOrderModalProps {
     onClose: () => void;
 }
 
-const ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onClose }) => {
+const  ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onClose }) => {
     const { data, isLoading, error } = useQuery({
         queryKey: ['foodOrderDetails', orderId],
         queryFn: () => fetchFoodOrders(),

@@ -26,4 +26,7 @@ urlpatterns = [
     path('fetch_foods', views.fetch_foods, name='fetch_foods'),
     path('place_food_order', views.place_food_order, name='place_food_order'),
     path('fetch_food_orders', views.fetch_food_orders, name='fetch_food_orders'),
+    path('review_food_order', views.review_food_order, name='review_food_order'),
+    path('user/food_order_reviews', views.get_user_food_order_reviews, name='get_user_food_order_reviews'),
+    path('user/reviewable_food_orders', views.get_reviewable_food_orders, name='get_reviewable_food_orders'),
 ]

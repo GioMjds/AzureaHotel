@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { AlertTriangle, Calendar, ChefHat, Clock, Eye, MapPin, Package } from "lucide-react";
+import { AlertTriangle, Calendar, ChefHat, Clock, Eye, MapPin, Package, Star } from "lucide-react";
 import { useState } from "react";
+import ReviewFoodOrderModal from "../../components/guests/ReviewFoodOrderModal";
 import ViewFoodOrderModal from "../../components/guests/ViewFoodOrderModal";
 import { fetchFoodOrders, FoodOrder } from "../../services/Food";
 
 const GuestFoodOrders = () => {
     const [selectedOrderId, setSelectedOrderId] = useState<string | number | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [reviewOrder, setReviewOrder] = useState<FoodOrder | null>(null);
+    const [reviewModalVisible, setReviewModalVisible] = useState(false);
 
     const { data: foodOrdersResponse, isLoading, error } = useQuery({
         queryKey: ['guestFoodOrders'],
@@ -21,9 +24,16 @@ const GuestFoodOrders = () => {
     const getStatusColor = (status: string) => {
         switch (status?.toLowerCase()) {
             case 'preparing':
+            case 'pending':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'processing':
+                return 'bg-blue-100 text-blue-800 border-blue-300';
             case 'ready':
                 return 'bg-green-100 text-green-800 border-green-300';
+            case 'completed':
+                return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+            case 'reviewed':
+                return 'bg-purple-100 text-purple-800 border-purple-300';
             case 'delivered':
                 return 'bg-blue-100 text-blue-800 border-blue-300';
             case 'cancelled':
@@ -36,9 +46,16 @@ const GuestFoodOrders = () => {
     const getStatusIcon = (status: string) => {
         switch (status?.toLowerCase()) {
             case 'preparing':
+            case 'pending':
                 return <ChefHat className="w-4 h-4" />;
+            case 'processing':
+                return <Clock className="w-4 h-4" />;
             case 'ready':
                 return <Package className="w-4 h-4" />;
+            case 'completed':
+                return <Package className="w-4 h-4" />;
+            case 'reviewed':
+                return <Star className="w-4 h-4" />;
             case 'delivered':
                 return <Eye className="w-4 h-4" />;
             case 'cancelled':
@@ -54,6 +71,19 @@ const GuestFoodOrders = () => {
         } catch {
             return dateString;
         }
+    };
+
+    const isOrderReviewable = (order: FoodOrder) => {
+        return order.status?.toLowerCase() === 'completed';
+    };
+
+    const isOrderReviewed = (order: FoodOrder) => {
+        return order.status?.toLowerCase() === 'reviewed';
+    };
+
+    const handleReviewOrder = (order: FoodOrder) => {
+        setReviewOrder(order);
+        setReviewModalVisible(true);
     };
 
     if (isLoading) {
@@ -197,15 +227,35 @@ const GuestFoodOrders = () => {
                                                 <span className="font-semibold text-gray-700">Total:</span>
                                                 <span className="font-bold text-emerald-600">₱{order.total_amount.toFixed(2)}</span>
                                             </div>
-                                            <button
-                                                className="mt-2 w-full cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded transition"
-                                                onClick={() => {
-                                                    setSelectedOrderId(order.order_id);
-                                                    setModalVisible(true);
-                                                }}
-                                            >
-                                                View Details
-                                            </button>
+
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    className="flex-1 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded transition text-sm"
+                                                    onClick={() => {
+                                                        setSelectedOrderId(order.order_id);
+                                                        setModalVisible(true);
+                                                    }}
+                                                >
+                                                    View Details
+                                                </button>
+
+                                                {isOrderReviewable(order) && (
+                                                    <button
+                                                        className="flex-1 cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded transition text-sm flex items-center justify-center gap-1"
+                                                        onClick={() => handleReviewOrder(order)}
+                                                    >
+                                                        <Star className="w-4 h-4" />
+                                                        Review
+                                                    </button>
+                                                )}
+
+                                                {isOrderReviewed(order) && (
+                                                    <div className="flex-1 bg-purple-100 text-purple-700 py-2 rounded text-sm flex items-center justify-center gap-1">
+                                                        <Star className="w-4 h-4 fill-current" />
+                                                        Reviewed
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -215,6 +265,11 @@ const GuestFoodOrders = () => {
                             orderId={selectedOrderId}
                             visible={modalVisible}
                             onClose={() => setModalVisible(false)}
+                        />
+                        <ReviewFoodOrderModal
+                            order={reviewOrder}
+                            visible={reviewModalVisible}
+                            onClose={() => setReviewModalVisible(false)}
                         />
                     </>
                 )}

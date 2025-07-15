@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Bookings, Transactions, Reviews, CraveOnCategory, CraveOnItem
+from .models import Bookings, Transactions, Reviews, CraveOnCategory, CraveOnItem, CraveOnOrder, CraveOnOrderItem, CraveOnReview
 from user_roles.models import CustomUsers
 from user_roles.serializers import CustomUserSerializer
 from property.models import Rooms, Areas
@@ -439,3 +439,69 @@ class ReviewSerializer(serializers.ModelSerializer):
             validated_data['room'] = validated_data['booking'].room
             
         return super().create(validated_data)
+
+# CraveOn Food Order Review Serializer
+class CraveOnReviewSerializer(serializers.ModelSerializer):
+    order_details = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CraveOnReview
+        fields = ['id', 'order_id', 'rating', 'comment', 'created_at', 'order_details']
+        read_only_fields = ['id', 'created_at']
+    
+    def get_order_details(self, obj):
+        """Get order details from CraveOn database"""
+        from django.db import connections
+        try:
+            cursor = connections['SystemInteg'].cursor()
+            cursor.execute("""
+                SELECT o.order_id, o.total_amount, o.status, o.guest_name, 
+                       o.hotel_room_area, o.ordered_at
+                FROM orders o 
+                WHERE o.order_id = %s
+            """, [obj.order_id])
+            
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'order_id': result[0],
+                    'total_amount': float(result[1]),
+                    'status': result[2],
+                    'guest_name': result[3],
+                    'hotel_room_area': result[4],
+                    'ordered_at': result[5]
+                }
+        except Exception as e:
+            return None
+        return None
+    
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5")
+        return value
+    
+    def validate_order_id(self, value):
+        """Validate that the order exists and is completed"""
+        from django.db import connections
+        try:
+            cursor = connections['SystemInteg'].cursor()
+            cursor.execute("SELECT status FROM orders WHERE order_id = %s", [value])
+            result = cursor.fetchone()
+            
+            if not result:
+                raise serializers.ValidationError("Order not found")
+            
+            if result[0] != 'Completed':
+                raise serializers.ValidationError("Only completed orders can be reviewed")
+            
+            # Check if already reviewed
+            cursor.execute("SELECT id FROM reviews WHERE order_id = %s", [value])
+            if cursor.fetchone():
+                raise serializers.ValidationError("This order has already been reviewed")
+                
+        except Exception as e:
+            if "already been reviewed" in str(e) or "not found" in str(e) or "completed orders" in str(e):
+                raise e
+            raise serializers.ValidationError("Error validating order")
+        
+        return value

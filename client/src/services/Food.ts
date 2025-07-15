@@ -58,6 +58,43 @@ export interface PlaceFoodOrderResponse {
   };
 }
 
+export interface FoodOrderReview {
+  id: number;
+  order_id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+  order_details: {
+    total_amount: number;
+    guest_name: string;
+    hotel_room_area: string;
+    ordered_at: string;
+  };
+}
+
+export interface ReviewFoodOrderData {
+  order_id: number;
+  rating: number;
+  comment?: string;
+}
+
+export interface ReviewFoodOrderResponse {
+  success: boolean;
+  message: string;
+  review: {
+    id: number;
+    order_id: number;
+    rating: number;
+    comment: string;
+    order_details: {
+      guest_name: string;
+      total_amount: number;
+      hotel_room_area: string;
+      status: string;
+    };
+  };
+}
+
 export const fetchCraveOnFoods = async () => {
   try {
     const response = await booking.get("/fetch_foods", {
@@ -80,7 +117,6 @@ export const placeFoodOrder = async (
     const formData = new FormData();
     formData.append("booking_id", orderData.booking_id.toString());
 
-    // Backend expects 'items' as JSON string, not just 'items'
     const itemsForBackend = orderData.items.map((item) => ({
       item_id: item.item_id,
       quantity: item.quantity,
@@ -121,6 +157,51 @@ export const fetchFoodOrders = async (bookingId?: number) => {
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch food orders: ${error}`);
+    throw error;
+  }
+};
+
+export const reviewFoodOrder = async (reviewData: ReviewFoodOrderData) => {
+  try {
+    const response = await booking.post("/review_food_order", reviewData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to review food order: ${error}`);
+    throw error;
+  }
+};
+
+export const getUserFoodOrderReviews = async () => {
+  try {
+    const response = await booking.get("/user/food_order_reviews", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch food order reviews: ${error}`);
+    throw error;
+  }
+};
+
+export const getReviewableFoodOrders = async () => {
+  try {
+    const response = await booking.get("/user/reviewable_food_orders", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch reviewable food orders: ${error}`);
     throw error;
   }
 };
