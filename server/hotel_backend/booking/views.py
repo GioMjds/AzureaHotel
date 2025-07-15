@@ -1,3 +1,5 @@
+import json
+import base64
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -16,6 +18,7 @@ from datetime import datetime
 from django.db import transaction, connections
 from django.db.models import Q
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from .craveon_integration import CraveOnIntegration
 import base64
 import imghdr
 import json
@@ -695,8 +698,8 @@ def generate_checkout_e_receipt(request, booking_id):
             "error": f"Failed to generate E-Receipt: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# CraveOn API endpoints
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fetch_foods(request):
     try:
         items = CraveOnItem.objects.using('SystemInteg').filter(
@@ -751,7 +754,6 @@ def place_food_order(request):
         except Bookings.DoesNotExist:
             return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check booking status
         if booking.status.lower() != 'checked_in':
             return Response({
                 "error": "Food orders can only be placed for checked-in bookings"
@@ -759,13 +761,11 @@ def place_food_order(request):
 
         hotel_user = request.user
 
-        # Validate cart items and calculate total
-        total_amount = 0
-        for item in cart_items:
-            craveon_item = CraveOnItem.objects.using('SystemInteg').filter(item_id=item.get('item_id')).first()
-            if not craveon_item:
-                return Response({"error": f"Item with ID {item.get('item_id')} not found."}, status=status.HTTP_400_BAD_REQUEST)
-            total_amount += float(craveon_item.price) * int(item.get('quantity', 1))
+        validation_result = CraveOnIntegration.validate_cart_items(cart_items)
+        if not validation_result['valid']:
+            return Response({"error": validation_result['error']}, status=status.HTTP_400_BAD_REQUEST)
+        
+        total_amount = validation_result['total_amount']
 
         try:
             payment_ss_data = base64.b64encode(payment_ss.read()).decode('utf-8')
@@ -775,67 +775,41 @@ def place_food_order(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic(using='SystemInteg'):
-            cursor = connections['SystemInteg'].cursor()
-
-            print(f"🔍 [CUSTOMER CHECK] Checking if user ID {hotel_user.id} exists in CraveOn customers table...")
-            cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", [hotel_user.id])
-            craveon_user = cursor.fetchone()
-            
-            if not craveon_user:
-                cursor.execute(
-                    """ INSERT INTO customers (customer_id, full_name, email, contact, address, password, is_archived, status) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                    [
-                        hotel_user.id,
-                        f"{hotel_user.first_name} {hotel_user.last_name}",
-                        hotel_user.email,
-                        '00000000000',
-                        'Hotel Guest - Synced Account',
-                        'hotel_guest_sync',
-                        False,
-                        'Active'
-                    ]
-                )
-            
-            cursor.execute(
-                """INSERT INTO orders (customer_id, total_amount, status, payment_ss, ordered_at, booking_id, 
-                    guest_name, guest_email, hotel_room_area) 
-                    VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s, %s)""",
-                [
-                    hotel_user.id,
-                    total_amount, 
-                    'Pending', 
-                    payment_ss_data, 
-                    booking_id,
-                    f"{hotel_user.first_name} {hotel_user.last_name}",
-                    hotel_user.email,
-                    booking.room.room_name if booking.room else (booking.area.area_name if booking.area else "Unknown")
-                ]
+            craveon_user_id = CraveOnIntegration.get_or_create_craveon_user(hotel_user, booking)
+            order_id = CraveOnIntegration.create_craveon_order(
+                craveon_user_id, 
+                total_amount, 
+                payment_ss_data, 
+                booking.id,
+                hotel_user,
+                booking
             )
-            order_id = cursor.lastrowid
-
-            # Insert order items
-            for item in cart_items:
-                cursor.execute(
-                    "INSERT INTO order_items (order_id, item_id, quantity) VALUES (%s, %s, %s)",
-                    [order_id, item.get('item_id'), item.get('quantity', 1)]
-                )
+            CraveOnIntegration.add_order_items(order_id, cart_items)
 
         booking.has_food_order = True
         booking.save()
 
         return Response({
-            "customer_id": hotel_user.id,
+            "message": "Food order placed successfully!",
+            "success": True,
+            "user_id": craveon_user_id,
             "order_id": order_id,
-            "booking_id": booking.id,
-            "items": cart_items,
             "total_amount": total_amount,
-            "hotel_guest_info": {
-                "booking_id": booking_id,
+            "hotel_booking_info": {
+                "hotel_booking_id": booking.id,
+                "hotel_user_id": hotel_user.id,
                 "guest_name": f"{hotel_user.first_name} {hotel_user.last_name}",
                 "guest_email": hotel_user.email,
                 "room_or_area": booking.room.room_name if booking.room else (booking.area.area_name if booking.area else "Unknown"),
+                "check_in_date": str(booking.check_in_date),
+                "check_out_date": str(booking.check_out_date),
             },
+            "craveon_order_info": {
+                "craveon_user_id": craveon_user_id,
+                "craveon_order_id": order_id,
+                "items_count": len(cart_items),
+                "status": "Pending"
+            }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -868,7 +842,7 @@ def fetch_food_orders(request):
                 columns = [col[0] for col in cursor.description]
                 for order_row in order_rows:
                     order = dict(zip(columns, order_row))
-                    
+
                     cursor.execute(
                         """
                         SELECT oi.order_item_id, oi.order_id, oi.item_id, oi.quantity, 
@@ -880,7 +854,7 @@ def fetch_food_orders(request):
                         [order['order_id']]
                     )
                     item_rows = cursor.fetchall()
-                    
+
                     items = []
                     for item_row in item_rows:
                         items.append({

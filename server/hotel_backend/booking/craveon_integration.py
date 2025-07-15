@@ -1,0 +1,167 @@
+# CraveOn Integration Helper
+# This module helps manage the integration between the hotel booking system and CraveOn food ordering system
+
+from django.db import connections
+from .models import CraveOnItem
+from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
+
+class CraveOnIntegration:
+    """
+    Helper class to manage CraveOn database operations without compromising existing schema
+    """
+    
+    @staticmethod
+    def get_or_create_craveon_user(hotel_user, booking) -> int:
+        """
+        Get existing CraveOn user by email or create a new one.
+        Returns the CraveOn user_id (auto-incremented).
+        """
+        cursor = connections['SystemInteg'].cursor()
+        
+        try:
+            cursor.execute(
+                "SELECT user_id FROM users WHERE email = %s AND is_archived = FALSE", 
+                [hotel_user.email]
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                logger.info(f"Found existing CraveOn user with ID: {result[0]} for email: {hotel_user.email}")
+                return result[0]
+            
+            logger.info(f"Creating new CraveOn user for email: {hotel_user.email}")
+            cursor.execute(
+                """INSERT INTO users (first_name, last_name, email, contact, address, password, is_archived, status) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                [
+                    hotel_user.first_name,
+                    hotel_user.last_name,
+                    hotel_user.email,
+                    getattr(hotel_user, 'phone_number', '') or '',
+                    '',
+                    'hotel_guest_temp_password',
+                    False,
+                    'Active'
+                ]
+            )
+            
+            new_user_id = cursor.lastrowid
+            logger.info(f"Created new CraveOn user with ID: {new_user_id}")
+            return new_user_id
+            
+        except Exception as e:
+            logger.error(f"Error managing CraveOn user: {str(e)}")
+            raise
+    
+    @staticmethod
+    def create_craveon_order(craveon_user_id: int, total_amount: float, payment_ss_data: str, booking_id: int, hotel_user, booking) -> int:
+        """
+        Create a new order in CraveOn database with all hotel information.
+        Returns the CraveOn order_id.
+        """
+        cursor = connections['SystemInteg'].cursor()
+        
+        try:
+            hotel_room_area = booking.room.room_name if booking.room else (
+                booking.area.area_name if booking.area else "Unknown"
+            )
+            guest_name = f"{hotel_user.first_name} {hotel_user.last_name}"
+            
+            cursor.execute(
+                """INSERT INTO orders (user_id, total_amount, status, payment_ss, payment_submitted, 
+                   booking_id, hotel_room_area, guest_email, guest_name, ordered_at) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())""",
+                [
+                    craveon_user_id,
+                    total_amount,
+                    'Pending',
+                    payment_ss_data,
+                    True,
+                    booking_id,
+                    hotel_room_area,
+                    hotel_user.email,
+                    guest_name
+                ]
+            )
+            
+            order_id = cursor.lastrowid
+            return order_id
+            
+        except Exception as e:
+            print(f"Error creating CraveOn order: {str(e)}")
+            raise
+    
+    @staticmethod
+    def add_order_items(order_id: int, cart_items: list):
+        """
+        Add items to the CraveOn order.
+        """
+        cursor = connections['SystemInteg'].cursor()
+        
+        try:
+            for item in cart_items:
+                cursor.execute(
+                    "INSERT INTO order_items (order_id, item_id, quantity) VALUES (%s, %s, %s)",
+                    [order_id, item.get('item_id'), item.get('quantity', 1)]
+                )
+                        
+        except Exception as e:
+            print(f"Error adding items to CraveOn order: {str(e)}")
+            raise
+    
+    @staticmethod
+    def validate_cart_items(cart_items: list) -> Dict[str, Any]:
+        """
+        Validate cart items and calculate total amount.
+        Returns dict with validation results and total amount.
+        """
+        
+        total_amount = 0
+        validated_items = []
+        
+        try:
+            for item in cart_items:
+                item_id = item.get('item_id')
+                quantity = int(item.get('quantity', 1))
+                
+                if not item_id or quantity <= 0:
+                    raise ValueError(f"Invalid item or quantity: {item}")
+                
+                craveon_item = CraveOnItem.objects.using('SystemInteg').filter(
+                    item_id=item_id,
+                    is_archived=False
+                ).first()
+                
+                if not craveon_item:
+                    raise ValueError(f"Item with ID {item_id} not found or archived")
+                
+                item_total = float(craveon_item.price) * quantity
+                total_amount += item_total
+                
+                validated_items.append({
+                    'item_id': item_id,
+                    'quantity': quantity,
+                    'price': float(craveon_item.price),
+                    'item_total': item_total,
+                    'name': craveon_item.item_name
+                })
+            
+            return {
+                'valid': True,
+                'total_amount': total_amount,
+                'items': validated_items,
+                'item_count': len(validated_items)
+            }
+            
+        except Exception as e:
+            print(f"Cart validation error: {str(e)}")
+            return {
+                'valid': False,
+                'error': str(e),
+                'total_amount': 0,
+                'items': [],
+                'item_count': 0
+            }

@@ -35,6 +35,29 @@ export interface FoodOrder {
   };
 }
 
+export interface PlaceFoodOrderResponse {
+  message: string;
+  success: boolean;
+  user_id: number;
+  order_id: number;
+  total_amount: number;
+  hotel_booking_info: {
+    hotel_booking_id: number;
+    hotel_user_id: number;
+    guest_name: string;
+    guest_email: string;
+    room_or_area: string;
+    check_in_date: string;
+    check_out_date: string;
+  };
+  craveon_order_info: {
+    craveon_user_id: number;
+    craveon_order_id: number;
+    items_count: number;
+    status: string;
+  };
+}
+
 export const fetchCraveOnFoods = async () => {
   try {
     const response = await booking.get("/fetch_foods", {
@@ -50,7 +73,9 @@ export const fetchCraveOnFoods = async () => {
   }
 };
 
-export const placeFoodOrder = async (orderData: PlaceFoodOrderData) => {
+export const placeFoodOrder = async (
+  orderData: PlaceFoodOrderData
+): Promise<PlaceFoodOrderResponse> => {
   try {
     const formData = new FormData();
     formData.append("booking_id", orderData.booking_id.toString());
@@ -66,12 +91,16 @@ export const placeFoodOrder = async (orderData: PlaceFoodOrderData) => {
       formData.append("payment_ss", orderData.payment_ss);
     }
 
-    const response = await booking.post("/place_food_order", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      withCredentials: true,
-    });
+    const response = await booking.post<PlaceFoodOrderResponse>(
+      "/place_food_order",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error(`Failed to place food order: ${error}`);

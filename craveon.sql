@@ -43,15 +43,17 @@ CREATE TABLE orders(
 	order_id INT AUTO_INCREMENT PRIMARY KEY,
 	user_id INT,
     total_amount DECIMAL(10,2) NOT NULL,
-	status ENUM('Pending','Processing', 'Completed', 'Cancelled') DEFAULT 'Pending',
+	status ENUM('Pending', 'Processing', 'Completed', 'Cancelled', 'Reviewed') DEFAULT 'Pending',
 	payment_ss LONGTEXT NULL,
+	payment_submitted BOOLEAN,
+	reviewed BOOLEAN DEFAULT FALSE,
 	cancellation_reason TEXT,
 	ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	booking_id INT NULL,
-	guest_name VARCHAR(100) NULL,
-	guest_email VARCHAR(100) NULL UNIQUE,
 	hotel_room_area VARCHAR(100) NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
+	guest_email VARCHAR(100) NULL,
+	guest_name VARCHAR(100) NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 CREATE TABLE order_items(
@@ -61,4 +63,12 @@ CREATE TABLE order_items(
     quantity INT NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(order_id),
 	FOREIGN KEY (item_id) REFERENCES items(item_id)
+);
+
+CREATE TABLE reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

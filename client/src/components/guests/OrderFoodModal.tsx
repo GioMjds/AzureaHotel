@@ -39,7 +39,7 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
             return placeFoodOrder(orderData);
         },
         onSuccess: (response) => {
-            if (response.customer_id && response.order_id) {
+            if (response.success && response.user_id && response.order_id) {
                 toast.success(response.message || "Food order placed successfully!");
                 setCart([]);
                 setShowPaymentSection(false);
