@@ -20,9 +20,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import traceback
 import io
-from .models import ArchivedUser, Commissions
+from .models import Commissions
 from django.db.models import Sum, Count, Avg
-from decimal import Decimal
 
 def convert_tempfile_to_inmemory(file):
     if hasattr(file, 'temporary_file_path'):
@@ -166,7 +165,6 @@ def dashboard_stats(request):
             'month': month,
             'year': year
         }
-        
         return Response(response_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({
@@ -556,6 +554,7 @@ def delete_area(request, area_id):
 
 # CRUD Amenities
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fetch_amenities(request):
     try:
         amenities = Amenities.objects.all().order_by('id')
@@ -858,15 +857,19 @@ def update_booking_status(request, booking_id):
     
     try:
         channel_layer = get_channel_layer()
+        active_statuses = ['pending', 'reserved', 'confirmed', 'checked_in']
+        active_count = Bookings.objects.filter(status__in=active_statuses).count()
+        
+        print(f"Sending WebSockets update - Active Count: {active_count}")
+        
         async_to_sync(channel_layer.group_send)(
             'admin_notifications',
             {
                 'type': 'active_count_update',
-                'count': Bookings.objects.exclude(
-                    status__in=['rejected', 'cancelled', 'no_show', 'checked_out']
-                ).count()
+                'count': active_count
             }
         )
+        print(f"📤 WebSocket notification sent with count: {active_count}")
     except Exception as e:
         print(f"WebSocket notification error: {str(e)}")
     
@@ -1039,7 +1042,7 @@ def manage_user(request, user_id):
                         'last_name': user.last_name,
                         'role': user.role
                     }
-                })
+                }, status=status.HTTP_201_CREATED)
             else:
                 try:
                     user = CustomUsers.objects.get(id=user_id)
@@ -1070,10 +1073,8 @@ def manage_user(request, user_id):
                 if password:
                     user.set_password(password)
 
-                # Handle PWD/Senior Discount checkbox
                 is_senior_or_pwd = data.get('is_senior_or_pwd')
                 if is_senior_or_pwd is not None:
-                    # Accept both boolean and string 'true'/'false'
                     if is_senior_or_pwd in [True, 'true', 'True', '1', 1]:
                         user.is_senior_or_pwd = True
                     else:
@@ -1091,12 +1092,11 @@ def manage_user(request, user_id):
                             'role': user.role,
                             'is_senior_or_pwd': user.is_senior_or_pwd
                         }
-                    })
+                    }, status=status.HTTP_200_OK)
                 except ValidationError as e:
                     return Response({'error': e.message_dict}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
     return Response({'error': 'Invalid request method'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 @api_view(['PUT'])
@@ -1265,7 +1265,6 @@ def daily_revenue(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1304,7 +1303,6 @@ def daily_bookings(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1353,7 +1351,6 @@ def daily_occupancy(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1399,7 +1396,6 @@ def daily_checkins_checkouts(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1437,7 +1433,6 @@ def daily_cancellations(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1657,25 +1652,19 @@ def daily_no_shows_rejected(request):
             "year": year,
             "days_in_month": days_in_month
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Commission Tracking APIs
-
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def commission_stats(request):
-    """Get commission summary statistics"""
     try:
-        # Get date filter parameters
-        date_filter = request.GET.get('filter', 'month')  # today, week, month, custom
+        date_filter = request.GET.get('filter', 'month')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         
-        # Build date filter
         filter_kwargs = {}
         today = timezone.now().date()
         
@@ -1691,10 +1680,8 @@ def commission_stats(request):
             filter_kwargs['ordered_at__date__gte'] = start_date
             filter_kwargs['ordered_at__date__lte'] = end_date
         
-        # Get commission data
         commissions = Commissions.objects.filter(**filter_kwargs, order_status='Completed')
         
-        # Calculate stats
         total_orders = commissions.count()
         total_commission = commissions.aggregate(Sum('commission_amount'))['commission_amount__sum'] or 0
         total_sales = commissions.aggregate(Sum('total_order_value'))['total_order_value__sum'] or 0
@@ -1705,21 +1692,16 @@ def commission_stats(request):
             'total_commission': float(total_commission),
             'total_sales': float(total_sales),
             'average_commission_per_order': float(avg_commission)
-        })
-        
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def commission_daily_data(request):
-    """Get daily commission data for charts"""
     try:
         month = int(request.GET.get('month', timezone.now().month))
         year = int(request.GET.get('year', timezone.now().year))
-        
-        # Get daily commission data
-        from django.db.models import functions
+
         daily_data = (
             Commissions.objects
             .filter(ordered_at__year=year, ordered_at__month=month, order_status='Completed')
@@ -1732,7 +1714,6 @@ def commission_daily_data(request):
             .order_by('day')
         )
         
-        # Format data for charts
         days = []
         commissions = []
         orders = []
@@ -1746,22 +1727,17 @@ def commission_daily_data(request):
             'days': days,
             'commission_data': commissions,
             'order_count': orders
-        })
-        
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def commission_by_room(request):
-    """Get commission data grouped by room"""
     try:
-        # Get date filter parameters
         date_filter = request.GET.get('filter', 'month')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         
-        # Build date filter
         filter_kwargs = {}
         today = timezone.now().date()
         
@@ -1777,7 +1753,6 @@ def commission_by_room(request):
             filter_kwargs['ordered_at__date__gte'] = start_date
             filter_kwargs['ordered_at__date__lte'] = end_date
         
-        # Get room-wise commission data
         room_data = (
             Commissions.objects
             .filter(**filter_kwargs, order_status='Completed')
@@ -1793,7 +1768,6 @@ def commission_by_room(request):
             .order_by('-commission_earned')
         )
         
-        # Format data
         formatted_data = []
         for item in room_data:
             formatted_data.append({
@@ -1805,25 +1779,22 @@ def commission_by_room(request):
                 'last_order_date': item['last_order_date'].strftime('%Y-%m-%d') if item['last_order_date'] else None
             })
         
-        return Response({'room_data': formatted_data})
-        
+        return Response({
+            'room_data': formatted_data
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def commission_detailed_orders(request):
-    """Get detailed commission orders table data"""
     try:
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 20))
         
-        # Get date filter parameters
         date_filter = request.GET.get('filter', 'month')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         
-        # Build date filter
         filter_kwargs = {}
         today = timezone.now().date()
         
@@ -1839,7 +1810,6 @@ def commission_detailed_orders(request):
             filter_kwargs['ordered_at__date__gte'] = start_date
             filter_kwargs['ordered_at__date__lte'] = end_date
         
-        # Get paginated commission data
         commissions = Commissions.objects.filter(**filter_kwargs).select_related('room', 'area').order_by('-ordered_at')
         
         paginator = Paginator(commissions, page_size)
@@ -1850,10 +1820,8 @@ def commission_detailed_orders(request):
         except EmptyPage:
             commission_page = paginator.page(paginator.num_pages)
         
-        # Format data
         commission_data = []
         for commission in commission_page:
-            # Determine location (room or area)
             location = 'N/A'
             if commission.room:
                 location = commission.room.room_name
@@ -1877,24 +1845,19 @@ def commission_detailed_orders(request):
             'total_pages': paginator.num_pages,
             'current_page': page,
             'total_count': paginator.count
-        })
-        
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def top_commission_rooms(request):
-    """Get top rooms by commission earnings"""
+def top_commissions(request):
     try:
         limit = int(request.GET.get('limit', 10))
         
-        # Get date filter parameters
         date_filter = request.GET.get('filter', 'month')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         
-        # Build date filter
         filter_kwargs = {}
         today = timezone.now().date()
         
@@ -1910,7 +1873,6 @@ def top_commission_rooms(request):
             filter_kwargs['ordered_at__date__gte'] = start_date
             filter_kwargs['ordered_at__date__lte'] = end_date
         
-        # Get top rooms by commission (including both rooms and areas)
         top_rooms_query = (
             Commissions.objects
             .filter(**filter_kwargs, order_status='Completed')
@@ -1939,7 +1901,6 @@ def top_commission_rooms(request):
             .order_by('-total_commission')
         )
         
-        # Format data for rooms
         formatted_data = []
         for room in top_rooms_query[:limit//2]:
             formatted_data.append({
@@ -1952,7 +1913,6 @@ def top_commission_rooms(request):
                 'avg_commission_per_order': float(room['total_commission'] / room['total_orders']) if room['total_orders'] > 0 else 0
             })
         
-        # Format data for areas
         for area in top_areas_query[:limit//2]:
             formatted_data.append({
                 'location_type': 'Area',
@@ -1964,29 +1924,26 @@ def top_commission_rooms(request):
                 'avg_commission_per_order': float(area['total_commission'] / area['total_orders']) if area['total_orders'] > 0 else 0
             })
         
-        # Sort combined results by total commission and limit
         formatted_data.sort(key=lambda x: x['total_commission'], reverse=True)
         formatted_data = formatted_data[:limit]
         
-        return Response({'top_rooms': formatted_data})
-        
+        return Response({
+            'data': formatted_data
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_commission(request):
-    """Create a new commission record"""
     try:
         data = request.data
         
-        # Validate required fields
         required_fields = ['craveon_order_id', 'total_order_value', 'order_status', 'ordered_at']
         for field in required_fields:
             if field not in data:
                 return Response({'error': f'{field} is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create commission record
         commission = Commissions.objects.create(
             craveon_order_id=data['craveon_order_id'],
             booking_id=data.get('booking_id'),
@@ -2005,14 +1962,12 @@ def create_commission(request):
             'commission_id': commission.id,
             'commission_amount': float(commission.commission_amount)
         }, status=status.HTTP_201_CREATED)
-        
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_commission_status(request, commission_id):
-    """Update commission order status"""
     try:
         commission = Commissions.objects.get(id=commission_id)
         commission.order_status = request.data.get('order_status', commission.order_status)
@@ -2022,27 +1977,19 @@ def update_commission_status(request, commission_id):
             'success': True,
             'commission_id': commission.id,
             'new_status': commission.order_status
-        })
-        
+        }, status=status.HTTP_200_OK)
     except Commissions.DoesNotExist:
         return Response({'error': 'Commission not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@api_view(['GET'])
 def sync_craveon_orders(request):
-    """Sync orders from CraveOn database to commission tracking"""
     try:
-        # This would be implemented to connect to CraveOn database
-        # and sync completed orders that don't exist in commission table
-        
-        # For now, return a placeholder response
         return Response({
             'success': True,
             'message': 'CraveOn order sync functionality needs to be implemented',
             'synced_orders': 0
-        })
-        
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

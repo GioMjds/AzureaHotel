@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { faBars, faChevronLeft, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { FC, useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { FC, useCallback, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import hotelLogo from "../../assets/hotel_logo.png";
 import Modal from "../../components/Modal";
@@ -47,35 +46,58 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ collapsed, setCollapsed }) => {
       if (data.type === "active_count_update") {
         setActiveBookingCount(data.count);
       }
-    }
+    },
+    auth_response: (data: WebSocketEvent) => {
+      if (data.type === "auth_response") {
+        if (data.success && send) {
+          send({ type: "get_active_count" });
+        }
+      }
+    },
+    bookings_data_update: (data: WebSocketEvent) => {
+      if (data.type === "bookings_data_update") {
+        setActiveBookingCount(data.count);
+      }
+    },
   });
 
-  const fetchActiveBookings = async (send: (message: any) => void): Promise<number> => {
-    return new Promise((resolve) => {
+  const requestActiveCount = useCallback(() => {
+    if (send && userDetails?.id) {
       send({ type: "get_active_count" });
-      resolve(activeBookingCount);
-    });
-  };
-
-  const { refetch } = useQuery({
-    queryKey: ["activeBookings"],
-    queryFn: () => fetchActiveBookings(send),
-    initialData: activeBookingCount,
-  });
+    }
+  }, [send, userDetails?.id]);
 
   useEffect(() => {
-    if (userDetails?.id) refetch();
-  }, [userDetails?.id, refetch]);
+    if (userDetails?.id) {
+      const timer = setTimeout(() => {
+        requestActiveCount();
+
+        if (send) {
+          send({ type: "connection_test", message: "Hello from AdminSidebar" });
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [userDetails, requestActiveCount, send]);
+
+  useEffect(() => {
+    if (userDetails?.id) {
+      const interval = setInterval(() => {
+        requestActiveCount();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [userDetails?.id, requestActiveCount]);
 
   const updatedMenuItems = menuItems.map(item => {
     if (item.label === "Manage Bookings") {
       return {
         ...item,
         label: (
-          <div className="flex items-end justify-end w-full">
+          <div className="flex items-center justify-between w-full">
             <span>Manage Bookings</span>
             {activeBookingCount > 0 && (
-              <span className="ml-4 bg-purple-600 font-semibold text-white rounded-full px-2 py-1 text-xs">
+              <span className="bg-purple-600 font-semibold text-white rounded-full px-2 py-1 text-xs ml-2">
                 {activeBookingCount}
               </span>
             )}

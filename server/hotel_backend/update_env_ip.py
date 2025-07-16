@@ -44,6 +44,7 @@ def main():
     client_replacements = {
         'VITE_API_URL': f'"http://{ip}:8000"',
         'VITE_REDIRECT_URI': f'"http://{ip}:5173"',
+        'VITE_CURRENT_IP_ADDRESS': f"{ip}",
     }
     update_env_file(client_env, client_replacements)
     print(f"Updated {client_env} with IP {ip}")

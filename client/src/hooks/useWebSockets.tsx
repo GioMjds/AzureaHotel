@@ -23,18 +23,29 @@ const connectionCounts = new WeakMap<WebSocketService, number>();
  */
 const useWebSockets = (wsService: WebSocketService, userId: string | undefined, eventHandlers: EventHandlers) => {
     const userIdRef = useRef<string | undefined>(userId);
-    
+
+    // console.log("🔄 useWebSockets called with userId:", userId);
+    // console.log("📋 Event handlers:", Object.keys(eventHandlers));
+
     useEffect(() => {
         userIdRef.current = userId;
     }, [userId]);
 
     useEffect(() => {
+        // console.log("🔄 useWebSockets useEffect triggered");
+        // console.log("👤 Current userId:", userId);
+        // console.log("🔌 WebSocket connected:", wsService.isConnected);
+
         const count = connectionCounts.get(wsService) || 0;
         connectionCounts.set(wsService, count + 1);
+        // console.log("📊 Connection count:", count + 1);
 
-        if (count === 0) wsService.connect(userId);
-        else {
+        if (count === 0) {
+            // console.log("🔌 First connection, connecting to WebSocket");
+            wsService.connect(userId);
+        } else {
             if (wsService.isConnected && wsService.getCurrentUserId() !== userId) {
+                // console.log("🔄 User changed, reconnecting");
                 wsService.disconnect();
                 wsService.connect(userId);
             }
@@ -42,27 +53,38 @@ const useWebSockets = (wsService: WebSocketService, userId: string | undefined, 
 
         (Object.entries(eventHandlers) as Array<[WebSocketEvent['type'], EventHandler<WebSocketEvent['type']>]>)
             .forEach(([eventType, handler]) => {
+                // console.log("📝 Registering event handler for:", eventType);
                 wsService.on(eventType, (data) => {
+                    // console.log("📨 Event received:", eventType, data);
                     handler(data);
                 });
             });
 
         return () => {
+            // console.log("🧹 Cleaning up useWebSockets");
 
             const newCount = (connectionCounts.get(wsService) || 1) - 1;
             connectionCounts.set(wsService, newCount);
+            // console.log("📊 New connection count:", newCount);
 
             (Object.keys(eventHandlers) as WebSocketEvent['type'][])
                 .forEach(eventType => {
+                    // console.log("🗑️ Removing event handler for:", eventType);
                     wsService.off(eventType);
                 });
 
-            if (newCount === 0) wsService.disconnect();
+            if (newCount === 0) {
+                // console.log("🔌 Last connection, disconnecting WebSocket");
+                wsService.disconnect();
+            }
         };
     }, [wsService, eventHandlers, userId]);
 
     return {
-        send: (data: object) => { return wsService.send(data) },
+        send: (data: object) => {
+            // console.log("📤 Sending message:", data);
+            return wsService.send(data);
+        },
         isConnected: wsService.isConnected,
     }
 }

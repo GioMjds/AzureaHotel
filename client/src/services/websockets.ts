@@ -11,16 +11,13 @@ export interface NotificationMessage {
 export type WebSocketEvent =
   | { type: "initial_count"; count: number }
   | { type: "unread_update"; count: number }
-  | {
-      type: "new_notification";
-      notification: NotificationMessage;
-      unread_count: number;
-    }
+  | { type: "new_notification"; notification: NotificationMessage; unread_count: number }
   | { type: "auth_response"; success: boolean; message?: string }
   | { type: "active_count"; count: number }
   | { type: "initial_data"; count: number; bookings: any[] }
   | { type: "bookings_data_update"; count: number; bookings: any[] }
-  | { type: "active_count_update"; count: number };
+  | { type: "active_count_update"; count: number }
+  | { type: "connection_test"; message: string };
 
 export class WebSocketService {
   private socket: WebSocket | null = null;
@@ -42,8 +39,6 @@ export class WebSocketService {
   }
 
   connect(userId: string) {
-    if (!userId) return;
-
     const now = Date.now();
     if (now - this.lastConnectTime < 2000) {
       return;
@@ -58,25 +53,25 @@ export class WebSocketService {
       }
     }
 
-    if (this.connecting) return;
+    if (this.connecting) {
+      return;
+    }
 
     this.connecting = true;
     this.currentUserId = userId;
 
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host =
-        window.location.hostname === "192.168.54.142"
-          ? process.env.VITE_API_URL
-          : window.location.host;
-      const url = `${protocol}//${host}/${this.socketPath}`;
+      const host = import.meta.env.VITE_CURRENT_IP_ADDRESS;
+      const url = `${protocol}//${host}:8000/${this.socketPath}`;
 
       this.socket = new WebSocket(url);
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
       this.socket.onclose = this.handleClose.bind(this);
       this.socket.onerror = this.handleConnectionError;
-    } catch {
+    } catch (error) {
+      console.error(`❌ WebSocket connection error: ${error}`);
       this.handleConnectionError();
     }
   }
@@ -161,7 +156,7 @@ export class WebSocketService {
       try {
         callback(data);
       } catch (error) {
-        console.error(`WebSocket: Error in ${event} callback:`, error);
+        console.error(`WebSocket: Error in ${event} callback: ${error}`);
       }
     }
   }
@@ -169,9 +164,10 @@ export class WebSocketService {
   send(data: object) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       try {
-        this.socket.send(JSON.stringify(data));
+        const jsonData = JSON.stringify(data);
+        this.socket.send(jsonData);
       } catch (error) {
-        console.error(`WebSocket: Error sending message:`, error);
+        console.error(`WebSocket: Error sending message: ${error}`);
       }
     } else {
       if (!this.connecting && this.currentUserId) {
@@ -206,6 +202,4 @@ export class WebSocketService {
 }
 
 export const webSocketService = new WebSocketService("ws/notifications/");
-export const webSocketAdminActives = new WebSocketService(
-  "ws/admin_dashboard/active-bookings/"
-);
+export const webSocketAdminActives = new WebSocketService("ws/admin_dashboard/active-bookings/");

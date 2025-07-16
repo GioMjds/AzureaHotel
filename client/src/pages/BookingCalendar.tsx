@@ -505,15 +505,13 @@ const BookingCalendar = () => {
                     </div>
                 </div>
 
-                {/* Room Info Card - Right Side */}
-
                 <div className="lg:col-span-1">
                     {roomData && (
                         <div className="bg-white rounded-lg ring-purple-500 ring-3 shadow-xl p-6 sticky top-24">
                             <div className="mb-4">
                                 <img
                                     loading="lazy"
-                                    src={roomData.images[0].room_image}
+                                    src={Array.isArray(roomData.images) && roomData.images.length > 0 ? roomData.images[0].room_image : '/public/vite.svg'}
                                     alt={roomData.room_name}
                                     className="w-full h-48 object-cover rounded-lg"
                                 />
@@ -521,7 +519,6 @@ const BookingCalendar = () => {
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-xl font-bold">{roomData.room_name}</h3>
                             </div>
-                            {/* Price/Discount Display - always in the same spot */}
                             <div className="mb-4">
                                 {(() => {
                                     const pricingResult = calculateRoomPricing({

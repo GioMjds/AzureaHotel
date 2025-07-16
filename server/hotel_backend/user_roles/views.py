@@ -662,7 +662,6 @@ def user_login(request):
             samesite='Lax',
             max_age=timedelta(days=7)
         )
-
         return response
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
