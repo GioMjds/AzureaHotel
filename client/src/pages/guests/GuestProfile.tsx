@@ -386,6 +386,7 @@ const GuestProfile = () => {
                   src={displayImage}
                   alt={guestData?.first_name}
                   className="h-full w-full object-cover"
+                  loading="lazy"
                 />
                 <motion.label
                   whileHover={{ opacity: 1 }}
@@ -421,6 +422,11 @@ const GuestProfile = () => {
                   {guestData?.first_name} {guestData?.last_name}
                   {guestData?.is_verified === 'verified' && (
                     <CheckCircle className="ml-2 h-6 w-6 text-green-500" />
+                  )}
+                  {guestData?.is_senior_or_pwd && (
+                    <span className="ml-2 text-sm uppercase text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                      Senior
+                    </span>
                   )}
                 </motion.h1>
                 <motion.div

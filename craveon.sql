@@ -20,6 +20,7 @@ CREATE TABLE users (
 	is_archived BOOLEAN DEFAULT FALSE,
 	status ENUM('Active', 'Inactive') DEFAULT 'Active',
     user_img LONGTEXT NULL,
+	hotel_user BOOLEAN DEFAULT FALSE
 );
 
 

@@ -1664,6 +1664,8 @@ def commission_stats(request):
         date_filter = request.GET.get('filter', 'month')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
+        month = request.GET.get('month')
+        year = request.GET.get('year')
         
         filter_kwargs = {}
         today = timezone.now().date()
@@ -1674,8 +1676,11 @@ def commission_stats(request):
             week_start = today - timedelta(days=today.weekday())
             filter_kwargs['ordered_at__date__gte'] = week_start
         elif date_filter == 'month':
-            filter_kwargs['ordered_at__year'] = today.year
-            filter_kwargs['ordered_at__month'] = today.month
+            # Use provided month and year if available, otherwise use current month/year
+            target_year = int(year) if year else today.year
+            target_month = int(month) if month else today.month
+            filter_kwargs['ordered_at__year'] = target_year
+            filter_kwargs['ordered_at__month'] = target_month
         elif date_filter == 'custom' and start_date and end_date:
             filter_kwargs['ordered_at__date__gte'] = start_date
             filter_kwargs['ordered_at__date__lte'] = end_date
@@ -1839,7 +1844,6 @@ def commission_detailed_orders(request):
                 'order_date': commission.ordered_at.strftime('%Y-%m-%d %H:%M'),
                 'status': commission.order_status
             })
-        
         return Response({
             'commissions': commission_data,
             'total_pages': paginator.num_pages,

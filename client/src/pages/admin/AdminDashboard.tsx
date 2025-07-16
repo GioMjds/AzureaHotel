@@ -7,26 +7,26 @@ import { motion } from "framer-motion";
 import { useRef, useState } from "react";
 import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Bar, Doughnut, Pie } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import MobileOrdersSection from "../../components/admin/MobileOrdersSection";
 import StatCard from "../../components/admin/StatCard";
 import DashboardSkeleton from "../../motions/skeletons/AdminDashboardSkeleton";
 import {
+  calculateCommissionFromMobileOrders,
   fetchAreaBookings,
   fetchAreaRevenue,
   fetchBookingStatusCounts,
-  fetchCommissionDailyData,
-  fetchCommissionStats,
   fetchDailyBookings,
   fetchDailyCancellations,
   fetchDailyNoShowsRejected,
   fetchDailyRevenue,
+  fetchMobileOrders,
   fetchMonthlyRevenue,
   fetchRoomBookings,
   fetchRoomRevenue,
   fetchStats,
-  fetchTopCommissionRooms
 } from "../../services/Admin";
 import "../../styles/report-modal.css";
 import { formatCurrency, formatMonthYear, getDaysInMonth } from "../../utils/formatters";
@@ -52,7 +52,6 @@ const AdminDashboard = () => {
   const bookingStatusChartRef = useRef<HTMLDivElement>(null);
   const areaRevenueChartRef = useRef<HTMLDivElement>(null);
   const roomRevenueChartRef = useRef<HTMLDivElement>(null);
-  const commissionChartRef = useRef<HTMLDivElement>(null);
 
   const CustomToolbar = (): null => null;
 
@@ -122,21 +121,14 @@ const AdminDashboard = () => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Commission tracking queries
-  const { data: commissionStats } = useQuery({
-    queryKey: ['commissionStats', 'month'],
-    queryFn: () => fetchCommissionStats('month'),
+  const { data: mobileOrdersData } = useQuery({
+    queryKey: ["mobileOrders", 1, 1000, selectedMonth, selectedYear], // Include date filters in query key
+    queryFn: () => fetchMobileOrders(1, 1000),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: commissionDailyData } = useQuery({
-    queryKey: ['commissionDailyData', selectedMonth, selectedYear],
-    queryFn: () => fetchCommissionDailyData(selectedMonth, selectedYear),
-  });
-
-  const { data: topCommissionRooms } = useQuery({
-    queryKey: ['topCommissionRooms', 'month'],
-    queryFn: () => fetchTopCommissionRooms(5, 'month'),
-  });
+  // Calculate commission stats from mobile orders data
+  const commissionStatsData = calculateCommissionFromMobileOrders(mobileOrdersData, selectedMonth, selectedYear);
 
   const calendarEventsQuery = useQuery({
     queryKey: ['calendarEvents', selectedMonth, selectedYear, dailyRevenueData, dailyBookingsResponse, dailyCancellationsResponse, dailyNoShowsRejectedResponse],
@@ -384,7 +376,7 @@ const AdminDashboard = () => {
       {/* Commission Tracking Section */}
       <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold text-gray-800">Commission</h2>
+          <h2 className="text-2xl font-semibold text-gray-800">Food Orders Commission</h2>
           <button
             onClick={() => setShowCommissionSection(!showCommissionSection)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -396,142 +388,26 @@ const AdminDashboard = () => {
         {/* Commission Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Total Orders</h3>
-            <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
+            <h3 className="text-sm font-medium opacity-90">Total Food Orders</h3>
+            <p className="text-2xl font-bold">{commissionStatsData?.total_orders || 0}</p>
+            <p className="text-xs opacity-75 mt-1">For {formattedMonthYear}</p>
           </div>
           <div className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium opacity-90">Commission Earned</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales * 0.2)}</p>
+            <p className="text-xs opacity-75 mt-1">From completed orders</p>
           </div>
           <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Total Sales</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
+            <h3 className="text-sm font-medium opacity-90">Total Food Sales</h3>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales || 0)}</p>
+            <p className="text-xs opacity-75 mt-1">All order statuses</p>
           </div>
           <div className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium opacity-90">Avg Commission</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales * 0.2 / commissionStatsData?.total_orders || 0)}</p>
+            <p className="text-xs opacity-75 mt-1">Per completed order</p>
           </div>
         </div>
-
-        {showCommissionSection && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
-          >
-            {/* Commission Daily Chart */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">Commission Earned per Day</h3>
-              <div className="h-64" ref={commissionChartRef}>
-                {commissionDailyData?.days?.length > 0 ? (
-                  <Bar
-                    data={{
-                      labels: commissionDailyData.days.map((day: number) => `Day ${day}`),
-                      datasets: [
-                        {
-                          label: 'Commission Earned',
-                          data: commissionDailyData.commission_data || [],
-                          backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                          borderColor: 'rgba(54, 162, 235, 1)',
-                          borderWidth: 1,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: {
-                            callback: function (value) {
-                              return formatCurrency(Number(value));
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    No commission data available
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top Commission Locations */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">Top Commission Locations</h3>
-              <div className="h-64">
-                {topCommissionRooms?.top_rooms?.length > 0 ? (
-                  <Pie
-                    data={{
-                      labels: topCommissionRooms.top_rooms.slice(0, 5).map((item: any) =>
-                        `${item.location_type}: ${item.room_number}`
-                      ),
-                      datasets: [
-                        {
-                          data: topCommissionRooms.top_rooms.slice(0, 5).map((item: any) => item.total_commission),
-                          backgroundColor: [
-                            'rgba(255, 99, 132, 0.8)',
-                            'rgba(54, 162, 235, 0.8)',
-                            'rgba(255, 205, 86, 0.8)',
-                            'rgba(75, 192, 192, 0.8)',
-                            'rgba(153, 102, 255, 0.8)',
-                          ],
-                          borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 205, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                          ],
-                          borderWidth: 2,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'right',
-                          labels: {
-                            boxWidth: 12,
-                            padding: 8,
-                            font: {
-                              size: 10,
-                            },
-                          },
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context) => {
-                              const value = context.raw || 0;
-                              return `${context.label}: ${formatCurrency(Number(value))}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    No commission data available
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
       </div>
 
       <div className="bg-white shadow-lg rounded-lg p-4 mb-6">
@@ -734,6 +610,11 @@ const AdminDashboard = () => {
           />
         </div>
       </motion.div>
+
+      {/* Mobile Orders Section */}
+      <div className="mt-6">
+        <MobileOrdersSection />
+      </div>
     </div>
   );
 };

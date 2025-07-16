@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import axios from "axios";
+import { MobileOrdersResponse } from "../types/MobileOrders";
 import { ADMIN } from "./_axios";
 
 export const fetchAdminProfile = async () => {
@@ -827,7 +829,7 @@ export const fetchMonthlyRevenue = async (month: number, year: number) => {
           return;
         }
       } catch (error) {
-        console.error(`Error calculating booking price:`, error);
+        console.error(`Error calculating booking price: ${error}`);
       }
     });
 
@@ -844,116 +846,132 @@ export const fetchMonthlyRevenue = async (month: number, year: number) => {
       formatted_revenue: formattedRevenue,
     };
   } catch (error) {
-    console.error(`Failed to fetch monthly revenue:`, error);
+    console.error(`Failed to fetch monthly revenue: ${error}`);
     throw error;
   }
 };
 
-// Commission Tracking APIs
+// Commission and Sales APIs
 export const fetchCommissionStats = async (
-  filter = "month",
+  filter: string = "month",
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  month?: number,
+  year?: number
 ) => {
   try {
     const params: any = { filter };
-    if (filter === "custom" && startDate && endDate) {
-      params.start_date = startDate;
-      params.end_date = endDate;
-    }
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (month) params.month = month;
+    if (year) params.year = year;
 
-    const response = await ADMIN.get("/commission-stats", {
+    const response = await ADMIN.get("/commission_stats", {
       params,
       withCredentials: true,
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching commission stats:", error);
+    console.error(`Failed to fetch commission stats: ${error}`);
     throw error;
   }
 };
 
-export const fetchCommissionDailyData = async (month: number, year: number) => {
-  try {
-    const response = await ADMIN.get("/commission-daily-data", {
-      params: { month, year },
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching commission daily data:", error);
-    throw error;
-  }
-};
-
-export const fetchCommissionByRoom = async (
-  filter = "month",
-  startDate?: string,
-  endDate?: string
+export const calculateCommissionFromMobileOrders = (
+  mobileOrdersData: MobileOrdersResponse | undefined,
+  selectedMonth?: number,
+  selectedYear?: number
 ) => {
-  try {
-    const params: any = { filter };
-    if (filter === "custom" && startDate && endDate) {
-      params.start_date = startDate;
-      params.end_date = endDate;
-    }
-
-    const response = await ADMIN.get("/commission-by-room", {
-      params,
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching commission by room:", error);
-    throw error;
+  if (!mobileOrdersData) {
+    return {
+      total_orders: 0,
+      total_commission: 0,
+      total_sales: 0,
+      average_commission_per_order: 0,
+    };
   }
+
+  const commissionRate = 0.2; // 20% commission rate
+  let totalOrders = 0;
+  let totalSales = 0;
+  let completedOrders = 0;
+  let completedSales = 0;
+
+  mobileOrdersData.customers.forEach((customer) => {
+    customer.orders.forEach((order) => {
+      const orderDate = new Date(order.ordered_at);
+
+      // Filter by selected month and year if provided
+      if (selectedMonth && selectedYear) {
+        const orderMonth = orderDate.getMonth() + 1; // getMonth() returns 0-11
+        const orderYear = orderDate.getFullYear();
+
+        if (orderMonth !== selectedMonth || orderYear !== selectedYear) {
+          return; // Skip this order if it doesn't match the selected month/year
+        }
+      }
+
+      totalOrders++;
+      totalSales += order.total_amount;
+
+      // Only count completed orders for commission calculation
+      if (order.status === "completed") {
+        completedOrders++;
+        completedSales += order.total_amount;
+      }
+    });
+  });
+
+  const totalCommission = completedSales * commissionRate;
+  const averageCommissionPerOrder =
+    completedOrders > 0 ? totalCommission / completedOrders : 0;
+
+  return {
+    total_orders: totalOrders,
+    total_commission: totalCommission,
+    total_sales: totalSales,
+    average_commission_per_order: averageCommissionPerOrder,
+    completed_orders: completedOrders,
+    completed_sales: completedSales,
+  };
 };
 
-export const fetchCommissionDetailedOrders = async (
+export const fetchMobileOrders = async (
   page: number = 1,
-  pageSize: number = 20,
-  filter = "month",
-  startDate?: string,
-  endDate?: string
+  pageSize: number = 10
 ) => {
   try {
-    const params: any = { page, page_size: pageSize, filter };
-    if (filter === "custom" && startDate && endDate) {
-      params.start_date = startDate;
-      params.end_date = endDate;
-    }
-
-    const response = await ADMIN.get("/commission-detailed-orders", {
-      params,
+    const response = await axios.get("http://192.168.1.13:5000/Admin/morders", {
+      params: {
+        page,
+        page_size: pageSize,
+      },
       withCredentials: true,
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching commission detailed orders:", error);
+    console.error(`Failed to fetch mobile orders: ${error}`);
     throw error;
   }
 };
 
-export const fetchTopCommissionRooms = async (
-  limit: number = 10,
-  filter = "month",
-  startDate?: string,
-  endDate?: string
+export const updateMobileOrderStatus = async (
+  orderId: number,
+  status: string
 ) => {
   try {
-    const params: any = { limit, filter };
-    if (filter === "custom" && startDate && endDate) {
-      params.start_date = startDate;
-      params.end_date = endDate;
-    }
-
-    const response = await ADMIN.get("/top-commission-rooms", {
-      params,
-      withCredentials: true,
-    });
+    const response = await ADMIN.put(
+      `/morders/${orderId}/status`,
+      {
+        status,
+      },
+      {
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching top commission rooms:", error);
+    console.error(`Failed to update mobile order status: ${error}`);
     throw error;
   }
 };
