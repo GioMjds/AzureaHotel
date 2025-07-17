@@ -58,12 +58,5 @@ urlpatterns = [
     path('booking/<int:booking_id>/payment', views.record_payment, name='record_payment'),
     
     # Commission Tracking
-    path('commission_stats', views.commission_stats, name='commission_stats'),
-    path('commission_daily_data', views.commission_daily_data, name='commission_daily_data'),
-    path('commission_by_room', views.commission_by_room, name='commission_by_room'),
-    path('commission_detailed_orders', views.commission_detailed_orders, name='commission_detailed_orders'),
-    path('top_commissions', views.top_commissions, name='top_commissions'),
-    path('create_commission', views.create_commission, name='create_commission'),
-    path('commission/<int:commission_id>/status', views.update_commission_status, name='update_commission_status'),
-    path('sync_craveon_orders', views.sync_craveon_orders, name='sync_craveon_orders'),
+    
 ]

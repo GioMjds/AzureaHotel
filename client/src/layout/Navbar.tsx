@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
-import { faBell, faChevronDown, faCircleUser, faRightToBracket, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBookBookmark, faChevronDown, faCircleUser, faPizzaSlice, faRightToBracket, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -514,9 +514,20 @@ const Navbar: FC = () => {
                       icon: <FontAwesomeIcon icon={faCircleUser} />,
                     },
                     {
+                      label: "My Bookings",
+                      onClick: () => navigate(`/guest/bookings`),
+                      icon: <FontAwesomeIcon icon={faBookBookmark} />,
+                    },
+                    {
+                      label: "My Food Orders",
+                      onClick: () => navigate(`/guest/food-orders`),
+                      icon: <FontAwesomeIcon icon={faPizzaSlice} />,
+                    },
+                    {
                       label: "Log Out",
                       onClick: () => setIsModalOpen(true),
                       icon: <FontAwesomeIcon icon={faRightToBracket} />,
+                      className: "text-red-500",
                     },
                   ]}
                   position="bottom"

@@ -6,6 +6,7 @@ interface DropdownItem {
     label: string;
     onClick: () => void;
     icon?: ReactNode;
+    className?: string;
 }
 
 interface CustomDropdownProps {
@@ -106,11 +107,11 @@ const Dropdown: FC<CustomDropdownProps> = ({ options, position = "bottom", child
                             {options.map((option, index) => (
                                 <li key={`${option.label}-${index}`}>
                                     <button
-                                        className="flex w-full items-center px-4 py-2 text-md cursor-pointer font-semibold hover:bg-gray-100 text-left"
+                                        className={`flex w-full items-center px-4 py-2 text-md cursor-pointer font-semibold hover:bg-gray-100 text-left ${option.className}`}
                                         onClick={() => handleOptionClick(option.onClick)}
                                     >
                                         {option.icon && (
-                                            <span className="mr-2">{option.icon}</span>
+                                            <span className={`mr-2 ${option.className}`}>{option.icon}</span>
                                         )}
                                         {option.label}
                                     </button>

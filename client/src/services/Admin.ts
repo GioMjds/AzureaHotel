@@ -877,31 +877,46 @@ export const fetchCommissionStats = async (
   }
 };
 
+/**
+ * Calculate commission from mobile food orders
+ * Only counts completed and reviewed orders for commission calculation
+ * @param mobileOrdersData - Response data from mobile orders API
+ * @param selectedMonth - Optional month filter (1-12)
+ * @param selectedYear - Optional year filter
+ * @returns Commission statistics including total commission, sales, and order counts
+ */
 export const calculateCommissionFromMobileOrders = (
   mobileOrdersData: MobileOrdersResponse | undefined,
   selectedMonth?: number,
   selectedYear?: number
 ) => {
-  if (!mobileOrdersData) {
+  if (!mobileOrdersData || !mobileOrdersData.customers) {
     return {
       total_orders: 0,
       total_commission: 0,
       total_sales: 0,
       average_commission_per_order: 0,
+      completed_orders: 0,
+      completed_sales: 0,
     };
   }
 
   const commissionRate = 0.2;
   let totalOrders = 0;
   let totalSales = 0;
+  let totalCommission = 0;
   let completedOrders = 0;
   let completedSales = 0;
 
   mobileOrdersData.customers.forEach((customer) => {
-    customer.orders.forEach((order) => {
-      const orderDate = new Date(order.ordered_at);
+    // Filter only hotel users (hotel_user: true or hotel_user: 1)
+    if (!customer.customer.hotel_user) {
+      return;
+    }
 
+    customer.orders.forEach((order) => {
       if (selectedMonth && selectedYear) {
+        const orderDate = new Date(order.ordered_at);
         const orderMonth = orderDate.getMonth() + 1;
         const orderYear = orderDate.getFullYear();
 
@@ -910,19 +925,19 @@ export const calculateCommissionFromMobileOrders = (
         }
       }
 
-      totalOrders++;
-      totalSales += order.total_amount;
-
-      if (order.status === "completed") {
+      // Only count and calculate commission for completed orders
+      if (order.status === "Completed" || order.status === "Reviewed") {
+        totalOrders++;
+        totalSales += order.total_amount;
+        totalCommission += order.total_amount * commissionRate;
         completedOrders++;
         completedSales += order.total_amount;
       }
     });
   });
 
-  const totalCommission = completedSales * commissionRate;
   const averageCommissionPerOrder =
-    completedOrders > 0 ? totalCommission / completedOrders : 0;
+    totalOrders > 0 ? totalCommission / totalOrders : 0;
 
   return {
     total_orders: totalOrders,
@@ -934,16 +949,91 @@ export const calculateCommissionFromMobileOrders = (
   };
 };
 
+/**
+ * Calculate daily commission data for chart visualization
+ * Only includes commission from completed and reviewed orders
+ * @param mobileOrdersData - Response data from mobile orders API
+ * @param selectedMonth - Month to calculate for (1-12)
+ * @param selectedYear - Year to calculate for
+ * @returns Daily commission breakdown with labels and totals
+ */
+export const calculateDailyCommissionData = (
+  mobileOrdersData: MobileOrdersResponse | undefined,
+  selectedMonth?: number,
+  selectedYear?: number
+) => {
+  if (
+    !mobileOrdersData ||
+    !mobileOrdersData.customers ||
+    !selectedMonth ||
+    !selectedYear
+  ) {
+    return {
+      dailyCommission: [],
+      dailyLabels: [],
+      totalDays: 0,
+    };
+  }
+
+  const commissionRate = 0.2;
+  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const dailyCommission = new Array(daysInMonth).fill(0);
+  const dailyLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
+
+  mobileOrdersData.customers.forEach((customer) => {
+    // Filter only hotel users (hotel_user: 1)
+    if (!customer.customer.hotel_user) {
+      return;
+    }
+
+    customer.orders?.forEach((order) => {
+      const orderDate = new Date(order.ordered_at);
+      const orderMonth = orderDate.getMonth() + 1;
+      const orderYear = orderDate.getFullYear();
+      const orderDay = orderDate.getDate();
+
+      // Check if order is in the selected month/year and is completed or reviewed
+      if (
+        orderMonth === selectedMonth &&
+        orderYear === selectedYear &&
+        (order.status === "Completed" || order.status === "Reviewed")
+      ) {
+        const orderCommission = order.total_amount * commissionRate;
+
+        // Add commission to the specific day (day - 1 because array is 0-indexed)
+        if (orderDay >= 1 && orderDay <= daysInMonth) {
+          dailyCommission[orderDay - 1] += orderCommission;
+        }
+      }
+    });
+  });
+
+  return {
+    dailyCommission,
+    dailyLabels,
+    totalDays: daysInMonth,
+  };
+};
+
 export const fetchMobileOrders = async (
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  month?: number,
+  year?: number
 ) => {
   try {
+    const params: any = {
+      page,
+      page_size: pageSize,
+    };
+
+    if (month && year) {
+      params.month = month;
+      params.year = year;
+    }
+
     const response = await axios.get("http://192.168.1.13:5000/Admin/morders", {
-      params: {
-        page,
-        page_size: pageSize,
-      },
+      params,
       withCredentials: true,
     });
     return response.data;

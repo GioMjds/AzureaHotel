@@ -818,7 +818,6 @@ def place_food_order(request):
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def fetch_food_orders(request):
     try:        
         booking_id = request.query_params.get('booking_id')
@@ -849,24 +848,37 @@ def fetch_food_orders(request):
                     cursor.execute(
                         """
                         SELECT oi.order_item_id, oi.order_id, oi.item_id, oi.quantity, 
-                                i.item_name AS name, i.price
+                                i.item_name AS name, i.price, i.image, c.category_id, c.category_name
                                 FROM order_items oi
                                 JOIN items i ON oi.item_id = i.item_id
+                                LEFT JOIN categories c ON i.category_id = c.category_id
                                 WHERE oi.order_id = %s
                         """,
                         [order['order_id']]
                     )
                     item_rows = cursor.fetchall()
-
+                    
                     items = []
                     for item_row in item_rows:
+                        image_base64 = ""
+                        image_mime = "image/jpeg"
+                        if item_row[6]:
+                            image_type = imghdr.what(None, h=item_row[6])
+                            if image_type:
+                                image_mime = f"image/{image_type}"
+                            image_base64 = base64.b64encode(item_row[6]).decode('utf-8')
+                        
                         items.append({
                             "order_item_id": item_row[0],
                             "order_id": item_row[1], 
                             "item_id": item_row[2],
                             "quantity": item_row[3],
                             "name": item_row[4],
-                            "price": float(item_row[5])
+                            "price": float(item_row[5]),
+                            "image": image_base64,
+                            "image_mime": image_mime,
+                            "category_id": item_row[7] if item_row[7] else None,
+                            "category_name": item_row[8] if item_row[8] else ""
                         })                    
                     order['items'] = items
                     order['booking_info'] = {
@@ -880,8 +892,8 @@ def fetch_food_orders(request):
                     order['id'] = order['order_id']
                     order['total_amount'] = float(order['total_amount'])
                     order['created_at'] = order['ordered_at']
+                    order['updated_at'] = order.get('updated_at', order['ordered_at'])
                     all_orders.append(order)
-        
         return Response({
             "data": all_orders,
         }, status=status.HTTP_200_OK)
@@ -900,6 +912,13 @@ def review_food_order(request):
                 'error': 'Order ID is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        try:
+            order_id = int(order_id)
+        except (ValueError, TypeError):
+            return Response({
+                'error': 'Order ID must be a valid number'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         cursor = connections['SystemInteg'].cursor()
         cursor.execute("""
             SELECT guest_email, status, guest_name, total_amount, hotel_room_area 
@@ -913,28 +932,56 @@ def review_food_order(request):
                 'error': 'Order not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        guest_email, guest_name, total_amount, hotel_room_area = order_result
+        guest_email, order_status, guest_name, total_amount, hotel_room_area = order_result
         
         if guest_email != request.user.email:
             return Response({
                 'error': 'You can only review your own orders'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        serializer = CraveOnReviewSerializer(data=request.data)
-        if serializer.is_valid():
-            rating = serializer.validated_data.get('rating')
-            comment = serializer.validated_data.get('comment', '')
-            
+        if order_status.lower() != 'completed':
+            return Response({
+                'error': 'Only completed orders can be reviewed'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        cursor.execute("""
+            SELECT id FROM reviews WHERE order_id = %s
+        """, [order_id])
+        
+        existing_review = cursor.fetchone()
+        if existing_review:
+            return Response({
+                'error': 'This order has already been reviewed'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        rating = request.data.get('rating')
+        comment = request.data.get('comment', '')
+        
+        if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
+            return Response({
+                'error': 'Rating must be an integer between 1 and 5'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if comment is None:
+            comment = ''
+        elif not isinstance(comment, str):
+            comment = str(comment)
+        
+        try:
+            # Insert the review
             cursor.execute("""
                 INSERT INTO reviews (order_id, rating, comment, created_at)
                 VALUES (%s, %s, %s, NOW())
             """, [order_id, rating, comment])
             
+            # Update order status
             cursor.execute("""
                 UPDATE orders 
-                SET status = 'Reviewed', reviewed = TRUE 
+                SET status = 'Reviewed', Reviewed = TRUE 
                 WHERE order_id = %s
             """, [order_id])
+            
+            cursor.connection.commit()
             
             review_id = cursor.lastrowid
             
@@ -950,18 +997,16 @@ def review_food_order(request):
                         'guest_name': guest_name,
                         'total_amount': float(total_amount),
                         'hotel_room_area': hotel_room_area,
-                        'status': 'Reviewed'
+                        'status': 'reviewed'
                     }
                 }
             }, status=status.HTTP_201_CREATED)
-        else:
-            return Response({
-                'error': 'Invalid review data',
-                'details': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+        except Exception as db_error:
+            cursor.connection.rollback()
+            raise db_error
+        finally:
+            cursor.close()
     except Exception as e:
-        logger.error(f"Error in review_food_order: {str(e)}")
         return Response({
             'error': f"Failed to review food order: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

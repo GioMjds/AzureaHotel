@@ -10,23 +10,20 @@ export interface MobileOrder {
   ordered_at: string;
   items: MobileOrderItem[];
   total_amount: number;
-  status:
-    | "pending"
-    | "confirmed"
-    | "preparing"
-    | "ready"
-    | "completed"
-    | "cancelled";
-  payment_ss: string;
+  status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Reviewed";
+  payment_submitted: boolean;
   cancellation_reason?: string;
 }
 
 export interface MobileOrderCustomer {
-  customer_id: number;
-  email: string;
-  full_name: string;
-  address: string;
-  contact: string;
+  customer: {
+    customer_id: number;
+    email: string;
+    full_name: string;
+    address: string;
+    contact: string;
+    hotel_user: number; // 0 or 1
+  };
   orders: MobileOrder[];
 }
 
@@ -42,12 +39,6 @@ export interface MobileOrdersResponse {
 
 export interface MobileOrderStatusUpdate {
   order_id: number;
-  status:
-    | "pending"
-    | "confirmed"
-    | "preparing"
-    | "ready"
-    | "completed"
-    | "cancelled";
+  status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Reviewed";
   cancellation_reason?: string;
 }

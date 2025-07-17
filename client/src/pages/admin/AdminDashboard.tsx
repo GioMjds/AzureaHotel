@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from "chart.js";
+import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, LineElement, PointElement, Tooltip } from "chart.js";
 import { format, getDay, isAfter, isSameDay, parse, startOfWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { useRef, useState } from "react";
-import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
+import { useMemo, useRef, useState } from "react";
+import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Doughnut } from "react-chartjs-2";
+import { Doughnut, Line } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import StatCard from "../../components/admin/StatCard";
 import DashboardSkeleton from "../../motions/skeletons/AdminDashboardSkeleton";
 import {
   calculateCommissionFromMobileOrders,
+  calculateDailyCommissionData,
   fetchAreaBookings,
   fetchAreaRevenue,
   fetchBookingStatusCounts,
@@ -21,18 +22,17 @@ import {
   fetchDailyNoShowsRejected,
   fetchDailyRevenue,
   fetchMobileOrders,
-  fetchMonthlyRevenue,
   fetchRoomBookings,
   fetchRoomRevenue,
   fetchStats,
 } from "../../services/Admin";
 import "../../styles/report-modal.css";
+import { CalendarEvent, EventComponentProps, ViewType } from "../../types/DashboardTypes";
 import { formatCurrency, formatMonthYear, getDaysInMonth } from "../../utils/formatters";
 import { generateNativePDF, prepareMonthlyReportData } from "../../utils/monthlyReportGenerator";
-import { ViewType, CalendarEvent, EventComponentProps } from "../../types/DashboardTypes";
 import Error from "../_ErrorBoundary";
 
-Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({
@@ -50,6 +50,7 @@ const AdminDashboard = () => {
   const bookingStatusChartRef = useRef<HTMLDivElement>(null);
   const areaRevenueChartRef = useRef<HTMLDivElement>(null);
   const roomRevenueChartRef = useRef<HTMLDivElement>(null);
+  const dailyCommissionChartRef = useRef<HTMLDivElement>(null);
 
   const CustomToolbar = (): null => null;
 
@@ -113,20 +114,27 @@ const AdminDashboard = () => {
     queryFn: () => fetchRoomBookings(selectedMonth, selectedYear),
   });
 
-  const { data: monthlyRevenueData } = useQuery({
-    queryKey: ["monthlyRevenue", selectedMonth, selectedYear],
-    queryFn: () => fetchMonthlyRevenue(selectedMonth, selectedYear),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: mobileOrdersData } = useQuery({
-    queryKey: ["mobileOrders", 1, 1000, selectedMonth, selectedYear], // Include date filters in query key
-    queryFn: () => fetchMobileOrders(1, 1000),
+  const mobileOrdersQuery = useQuery({
+    queryKey: ["mobileOrders", selectedMonth, selectedYear],
+    queryFn: () => fetchMobileOrders(1, 1000, selectedMonth, selectedYear),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate commission stats from mobile orders data
-  const commissionStatsData = calculateCommissionFromMobileOrders(mobileOrdersData, selectedMonth, selectedYear);
+  const commissionStats = useMemo(() => {
+    return calculateCommissionFromMobileOrders(
+      mobileOrdersQuery.data,
+      selectedMonth,
+      selectedYear
+    );
+  }, [mobileOrdersQuery.data, selectedMonth, selectedYear]);
+
+  const dailyCommissionData = useMemo(() => {
+    return calculateDailyCommissionData(
+      mobileOrdersQuery.data,
+      selectedMonth,
+      selectedYear
+    );
+  }, [mobileOrdersQuery.data, selectedMonth, selectedYear]);
 
   const calendarEventsQuery = useQuery({
     queryKey: ['calendarEvents', selectedMonth, selectedYear, dailyRevenueData, dailyBookingsResponse, dailyCancellationsResponse, dailyNoShowsRejectedResponse],
@@ -174,6 +182,9 @@ const AdminDashboard = () => {
     )
   });
 
+  const totalMonthlyHotelRevenue = dailyRevenueData?.reduce((sum: number, dailyRevenue: number) => sum + (dailyRevenue || 0), 0) || 0;
+  const totalMonthlyRevenue = totalMonthlyHotelRevenue + (commissionStats?.total_commission || 0);
+
   const stats = {
     activeBookings: data?.active_bookings || 0,
     pendingBookings: data?.pending_bookings || 0,
@@ -185,12 +196,14 @@ const AdminDashboard = () => {
     maintenanceRooms: data?.maintenance_rooms || 0,
     upcomingReservations: data?.upcoming_reservations || 0,
     totalBookings: data?.total_bookings || 0,
-    revenue: monthlyRevenueData?.revenue || data?.revenue || 0,
+    revenue: totalMonthlyRevenue,
     roomRevenue: data?.room_revenue || 0,
     venueRevenue: data?.venue_revenue || 0,
-    formattedRevenue: data?.formatted_revenue,
+    commissionRevenue: commissionStats?.total_commission || 0,
+    formattedRevenue: formatCurrency(totalMonthlyRevenue),
     formattedRoomRevenue: data?.formatted_room_revenue,
     formattedVenueRevenue: data?.formatted_venue_revenue,
+    formattedCommissionRevenue: formatCurrency(commissionStats?.total_commission || 0),
     revenueMonth: selectedMonth,
     revenueYear: selectedYear,
   };
@@ -240,6 +253,8 @@ const AdminDashboard = () => {
       roomNames,
       roomRevenueValues,
       roomBookingValues,
+      commissionStats,
+      dailyCommissionData,
     });
 
     const getCanvasFromRef = (ref: React.RefObject<HTMLDivElement>) => {
@@ -247,20 +262,18 @@ const AdminDashboard = () => {
       return ref.current.querySelector('canvas');
     };
 
-    // Capture chart canvases
     const bookingStatusCanvas = getCanvasFromRef(bookingStatusChartRef);
     const areaRevenueCanvas = getCanvasFromRef(areaRevenueChartRef);
     const roomRevenueCanvas = getCanvasFromRef(roomRevenueChartRef);
+    const dailyCommissionCanvas = getCanvasFromRef(dailyCommissionChartRef);
 
-    // Attach canvas elements to report data (if needed for HTML preview)
     if (bookingStatusCanvas) reportData.charts.bookingStatusChart = bookingStatusCanvas;
     if (areaRevenueCanvas) reportData.charts.areaRevenueChart = areaRevenueCanvas;
     if (roomRevenueCanvas) reportData.charts.roomRevenueChart = roomRevenueCanvas;
+    if (dailyCommissionCanvas) reportData.charts.dailyCommissionChart = dailyCommissionCanvas;
 
-    // Generate PDF
     const pdfDoc = generateNativePDF(reportData);
 
-    // Open PDF in new tab for printing
     const pdfBlob = pdfDoc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     window.open(pdfUrl, '_blank');
@@ -366,7 +379,7 @@ const AdminDashboard = () => {
           title="Monthly Revenue"
           value={stats.formattedRevenue}
           borderColor="border-orange-500"
-          tooltip={`Revenue from checked-in and checked-out bookings for ${formattedMonthYear}`}
+          tooltip={`Total revenue including bookings and food commission for ${formattedMonthYear}`}
         />
       </div>
 
@@ -379,24 +392,92 @@ const AdminDashboard = () => {
         {/* Commission Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Total Food Orders</h3>
-            <p className="text-2xl font-bold">{commissionStatsData?.total_orders || 0}</p>
-            <p className="text-xs opacity-75 mt-1">For {formattedMonthYear}</p>
+            <h3 className="text-md font-semibold">Total Food Orders</h3>
+            <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
+            <p className="text-sm mt-1">For {formattedMonthYear}</p>
           </div>
           <div className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Commission Earned</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales * 0.2)}</p>
-            <p className="text-xs opacity-75 mt-1">From completed orders</p>
+            <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
+            <p className="text-sm mt-1">From {commissionStats?.completed_orders || 0} completed orders</p>
           </div>
           <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Total Food Sales</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales || 0)}</p>
-            <p className="text-xs opacity-75 mt-1">All order statuses</p>
+            <h3 className="text-lg font-semibold">Total Food Sales</h3>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
+            <p className="text-sm mt-1">For {formattedMonthYear}</p>
           </div>
           <div className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-sm font-medium opacity-90">Avg Commission</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStatsData?.total_sales * 0.2 / commissionStatsData?.total_orders || 0)}</p>
-            <p className="text-xs opacity-75 mt-1">Per completed order</p>
+            <h3 className="text-md font-semibold">Avg Commission</h3>
+            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>
+            <p className="text-sm mt-1">Per completed order</p>
+          </div>
+        </div>
+
+        {/* Daily Commission Line Graph */}
+        <div className="mt-6" ref={dailyCommissionChartRef}>
+          <h3 className="text-2xl font-semibold mb-4 text-gray-800">Daily Commission Trend - {formattedMonthYear}</h3>
+          <div className="h-64">
+            <Line
+              data={{
+                labels: dailyCommissionData.dailyLabels,
+                datasets: [
+                  {
+                    label: 'Daily Commission Earned',
+                    data: dailyCommissionData.dailyCommission,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: 'top',
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: (context) => {
+                        const value = context.raw as number;
+                        return `Commission: ${formatCurrency(value)}`;
+                      },
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Day of Month',
+                    },
+                    grid: {
+                      display: false,
+                    },
+                  },
+                  y: {
+                    title: {
+                      display: true,
+                      text: 'Commission Amount (₱)',
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function (value) {
+                        return formatCurrency(value as number);
+                      },
+                    },
+                  },
+                },
+              }}
+            />
           </div>
         </div>
       </div>

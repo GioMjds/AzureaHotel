@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { format } from "date-fns";
-import "../styles/report-modal.css";
 import jsPDF from "jspdf";
-import { formatCurrency } from "./formatters";
+import "../styles/report-modal.css";
 
 export interface MonthlyReportData {
   period: string;
@@ -14,6 +13,8 @@ export interface MonthlyReportData {
     formattedRevenue: string;
     roomRevenue: number;
     venueRevenue: number;
+    commissionRevenue?: number;
+    formattedCommissionRevenue?: string;
     totalRooms: number;
     availableRooms: number;
     occupiedRooms: number;
@@ -37,7 +38,10 @@ export interface MonthlyReportData {
     bookingStatusChart?: HTMLCanvasElement;
     roomRevenueChart?: HTMLCanvasElement;
     areaRevenueChart?: HTMLCanvasElement;
+    dailyCommissionChart?: HTMLCanvasElement;
   };
+  commissionStats?: any;
+  dailyCommissionData?: any;
 }
 
 export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
@@ -134,7 +138,7 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
     { label: "Active Bookings", value: data.stats.activeBookings.toString() },
     { label: "Pending Bookings", value: data.stats.pendingBookings.toString() },
     { label: "Total Monthly Bookings", value: data.stats.totalBookings.toLocaleString() },
-    { label: "Monthly Revenue (in peso)", value: data.stats.revenue.toLocaleString() },
+    { label: "Monthly Revenue (in peso)", value: `${data.stats.revenue.toLocaleString()}0` },
   ];
 
   const columns = 2;
@@ -340,6 +344,116 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
     y = styles.spacing.margin;
   }
 
+  // Commission Section
+  if (data.commissionStats && data.commissionStats.total_commission > 0) {
+    y = drawSectionHeader(doc, "Food Orders Commission", y, styles);
+
+    doc.setFontSize(styles.fonts.normal);
+    doc.setTextColor(styles.colors.secondary);
+    const commissionText = `Food orders commission represents additional revenue stream from mobile app orders. The hotel earns a 20% commission on completed food orders placed through the mobile application.`;
+
+    const commissionLines = doc.splitTextToSize(
+      commissionText,
+      contentWidth - 20
+    );
+    commissionLines.forEach((line: string) => {
+      doc.text(line, styles.spacing.margin, y);
+      y += 5;
+    });
+
+    y += 5;
+
+    const kpiY = y;
+    const kpiWidth = (contentWidth - 10) / 2;
+
+    drawKpiBox(
+      doc,
+      "Total Orders",
+      (data.commissionStats.total_orders || 0).toString(),
+      styles.spacing.margin,
+      kpiY,
+      kpiWidth,
+      styles
+    );
+
+    drawKpiBox(
+      doc,
+      "Completed Orders",
+      (data.commissionStats.completed_orders || 0).toString(),
+      styles.spacing.margin + kpiWidth + 10,
+      kpiY,
+      kpiWidth,
+      styles
+    );
+
+    // Second row
+    const secondRowY = kpiY + styles.spacing.kpiBoxHeight + 10;
+
+    drawKpiBox(
+      doc,
+      "Commission Earned (in peso)",
+      `${(data.commissionStats.total_commission || 0).toLocaleString()}0`,
+      styles.spacing.margin,
+      secondRowY,
+      kpiWidth,
+      styles
+    );
+
+    drawKpiBox(
+      doc,
+      "Avg Per Order (in peso)",
+      `${(data.commissionStats.average_commission_per_order || 0).toLocaleString()}0`,
+      styles.spacing.margin + kpiWidth + 10,
+      secondRowY,
+      kpiWidth,
+      styles
+    );
+
+    y = secondRowY + styles.spacing.kpiBoxHeight + 15;
+
+    // Daily Commission Chart
+    if (data.charts.dailyCommissionChart) {
+      if (y + styles.spacing.chartHeight > pageHeight - 20) {
+        doc.addPage();
+        y = styles.spacing.margin;
+      }
+
+      doc.setFontSize(styles.fonts.normal);
+      doc.setTextColor(styles.colors.secondary);
+      doc.text("Daily Commission Trend", styles.spacing.margin, y);
+      y += 10;
+
+      const chartCanvas = data.charts.dailyCommissionChart;
+      const imgData = chartCanvas.toDataURL("image/png");
+      doc.addImage(
+        imgData,
+        "PNG",
+        styles.spacing.margin,
+        y,
+        contentWidth,
+        styles.spacing.chartHeight
+      );
+
+      y += styles.spacing.chartHeight + 10;
+    }
+
+    // Commission insights
+    const insights = `Commission revenue represents 20% of total monthly revenue. This additional revenue stream helps diversify income sources beyond traditional room and venue bookings.`;
+
+    const insightLines = doc.splitTextToSize(insights, contentWidth - 20);
+    insightLines.forEach((line: string) => {
+      doc.text(line, styles.spacing.margin, y);
+      y += 5;
+    });
+
+    y += 15;
+
+    if (y > pageHeight - 50) {
+      doc.addPage();
+      y = styles.spacing.margin;
+    }
+  }
+
   drawDivider(doc, y, styles);
   y += styles.spacing.sectionTop;
 
@@ -420,11 +534,19 @@ const drawParagraph = (
   );
 };
 
-const drawKpiBox = (doc: jsPDF, title: string, value: string, x: number, y: number, width: number, styles: any): void => {
+const drawKpiBox = (
+  doc: jsPDF,
+  title: string,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  styles: any
+): void => {
   doc.setFillColor(styles.colors.background);
-  doc.roundedRect(x, y, width, styles.spacing.kpiBoxHeight, 2, 2, 'F');
+  doc.roundedRect(x, y, width, styles.spacing.kpiBoxHeight, 2, 2, "F");
   doc.setDrawColor(styles.colors.light);
-  doc.roundedRect(x, y, width, styles.spacing.kpiBoxHeight, 2, 2, 'S');
+  doc.roundedRect(x, y, width, styles.spacing.kpiBoxHeight, 2, 2, "S");
 
   doc.setFont("courier", "bold");
   doc.setFontSize(styles.fonts.normal);
@@ -436,7 +558,8 @@ const drawKpiBox = (doc: jsPDF, title: string, value: string, x: number, y: numb
   const valueFontSize = styles.fonts.header;
   doc.setFontSize(valueFontSize);
   doc.setTextColor(styles.colors.primary);
-  const textWidth = doc.getStringUnitWidth(value) * valueFontSize / doc.internal.scaleFactor;
+  const textWidth =
+    (doc.getStringUnitWidth(value) * valueFontSize) / doc.internal.scaleFactor;
   const centerX = x + width / 2;
 
   const textHeight = valueFontSize * 0.3527;
@@ -632,7 +755,7 @@ export const generateReportPreviewHTML = (data: MonthlyReportData): string => {
                 <tr>
                   <th>Area</th>
                   <th>Bookings</th>
-                  <th>Revenue</th>
+                  <th>Revenue (peso)</th>
                 </tr>
               </thead>
               <tbody>
@@ -642,9 +765,9 @@ export const generateReportPreviewHTML = (data: MonthlyReportData): string => {
                   <tr>
                     <td>${area}</td>
                     <td>${data.areaBookingValues[index] || 0}</td>
-                    <td>${formatCurrency(
+                    <td>${(
                       data.areaRevenueValues[index] || 0
-                    )}</td>
+                    ).toLocaleString()} (peso)</td>
                   </tr>
                 `
                   )
@@ -660,7 +783,7 @@ export const generateReportPreviewHTML = (data: MonthlyReportData): string => {
                 <tr>
                   <th>Room</th>
                   <th>Bookings</th>
-                  <th>Revenue</th>
+                  <th>Revenue (peso)</th>
                 </tr>
               </thead>
               <tbody>
@@ -670,9 +793,9 @@ export const generateReportPreviewHTML = (data: MonthlyReportData): string => {
                   <tr>
                     <td>${room}</td>
                     <td>${data.roomBookingValues[index] || 0}</td>
-                    <td>${formatCurrency(
+                    <td>${(
                       data.roomRevenueValues[index] || 0
-                    )}</td>
+                    ).toLocaleString()} (peso)</td>
                   </tr>
                 `
                   )
@@ -689,14 +812,12 @@ export const generateReportPreviewHTML = (data: MonthlyReportData): string => {
         <h1 class="report-description">
           This report summarizes the hotel's performance for ${
             data.period
-          }. The total revenue for this period was ${
-    data.stats.formattedRevenue
-  },
-          with room bookings contributing ${formatCurrency(
-            data.stats.roomRevenue
-          )} and venue bookings contributing ${formatCurrency(
-    data.stats.venueRevenue
-  )}.
+          }. The total revenue for this period was ${data.stats.revenue.toLocaleString()} (in peso),
+          with room bookings contributing ${(
+            data.stats.roomRevenue || 0
+          ).toLocaleString()} (in peso) and venue bookings contributing ${(
+    data.stats.venueRevenue || 0
+  ).toLocaleString()} (in peso).
           There were a total of ${data.stats.totalBookings} bookings, with ${
     data.stats.activeBookings
   } currently active and ${data.stats.pendingBookings} pending.
@@ -721,6 +842,9 @@ export const prepareMonthlyReportData = (
       formattedRevenue: dashboardData.stats.formattedRevenue,
       roomRevenue: dashboardData.stats.roomRevenue,
       venueRevenue: dashboardData.stats.venueRevenue,
+      commissionRevenue: dashboardData.stats.commissionRevenue,
+      formattedCommissionRevenue:
+        dashboardData.stats.formattedCommissionRevenue,
       totalRooms: dashboardData.stats.totalRooms,
       availableRooms: dashboardData.stats.availableRooms,
       occupiedRooms: dashboardData.stats.occupiedRooms,
@@ -734,10 +858,13 @@ export const prepareMonthlyReportData = (
     roomNames: dashboardData.roomNames,
     roomRevenueValues: dashboardData.roomRevenueValues,
     roomBookingValues: dashboardData.roomBookingValues,
+    commissionStats: dashboardData.commissionStats,
+    dailyCommissionData: dashboardData.dailyCommissionData,
     charts: {
       bookingStatusChart: null,
       roomRevenueChart: null,
       areaRevenueChart: null,
+      dailyCommissionChart: null,
     },
   };
 };
