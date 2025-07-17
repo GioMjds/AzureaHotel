@@ -55,7 +55,6 @@ const VenueDetails = () => {
     const reviews = reviewsData?.data || [];
     const totalReviews = reviewsData?.total || 0;
 
-    // Discount logic similar to VenueCard
     const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
     const parsePrice = (val: string | number | null | undefined) => {
         if (!val) return null;
@@ -74,7 +73,6 @@ const VenueDetails = () => {
         const originalPrice = parsePrice(venueDetail.price_per_hour);
 
         if (isSeniorOrPwd) {
-            // For senior/PWD users, compare available discounts and pick the best (lowest price)
             const availableDiscounts = [];
 
             if (adminDiscounted !== null && adminDiscounted < originalPrice) {
@@ -94,14 +92,12 @@ const VenueDetails = () => {
             }
 
             if (availableDiscounts.length > 0) {
-                // Pick the discount with the lowest price
                 const bestDiscount = availableDiscounts.reduce((best, current) =>
                     current.price < best.price ? current : best
                 );
                 displayDiscountedPrice = bestDiscount.originalValue;
             }
         } else {
-            // For non-senior users, only apply count if available
             if (adminDiscounted !== null && adminDiscounted < originalPrice) {
                 displayDiscountedPrice = venueDetail.discounted_price;
             }

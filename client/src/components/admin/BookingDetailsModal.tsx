@@ -3,28 +3,15 @@ import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Check, CheckCircle2, Clock, CreditCard, Image, X } from "lucide-react";
 import { FC, useState } from "react";
 import EventLoader from "../../motions/loaders/EventLoader";
-import { BookingResponse } from "../../types/BookingClient";
+import { BookingDetailProps, ExpandedImg, BookingAction } from "../../types/BookingClient";
 import { formatCurrency, formatDate, formatTime, getBookingPrice } from "../../utils/formatters";
 import BookingStatusBadge from "./BookingStatusBadge";
-
-interface BookingDetailProps {
-    booking: BookingResponse;
-    onClose: () => void;
-    onConfirm: (downPaymentAmount?: number) => void;
-    onReject: () => void;
-    onCheckIn?: (paymentAmount: number) => void;
-    onCheckOut?: () => void;
-    onNoShow?: () => void;
-    onCancel?: () => void;
-    canManage: boolean;
-    isUpdating: boolean;
-}
 
 const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfirm, onReject, onCheckIn, onCheckOut, onNoShow, onCancel, canManage, isUpdating }) => {
     const [paymentAmount, setPaymentAmount] = useState<string>("");
     const [downPayment, setDownPayment] = useState<string>("");
-    const [expandedImage, setExpandedImage] = useState<'validId' | 'paymentProof' | null>(null);
-    const [pendingAction, setPendingAction] = useState<'checkin' | 'checkout' | 'cancel' | 'reject' | 'no_show' | 'reserve' | null>(null);
+    const [expandedImage, setExpandedImage] = useState<ExpandedImg | null>(null);
+    const [pendingAction, setPendingAction] = useState<BookingAction | null>(null);
 
     const isVenueBooking: boolean = booking?.is_venue_booking;
     const bookingPrice: number = getBookingPrice(booking);
@@ -197,12 +184,12 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
     const getLoadingText = () => {
         if (pendingAction) {
             switch (pendingAction) {
-                case 'checkin': return "Checking in guest...";
-                case 'checkout': return "Checking out guest...";
-                case 'cancel': return "Cancelling booking...";
-                case 'no_show': return "Marking as no-show...";
-                case 'reject': return "Rejecting booking request...";
-                case 'reserve': return "Reserving booking...";
+                case BookingAction.CHECK_IN: return "Checking in guest...";
+                case BookingAction.CHECK_OUT: return "Checking out guest...";
+                case BookingAction.CANCEL: return "Cancelling booking...";
+                case BookingAction.NO_SHOW: return "Marking as no-show...";
+                case BookingAction.REJECT: return "Rejecting booking request...";
+                case BookingAction.RESERVE: return "Reserving booking...";
                 default: return "Processing booking...";
             }
         }
@@ -222,12 +209,12 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
     const getLoaderType = () => {
         if (pendingAction) {
             switch (pendingAction) {
-                case 'checkin': return 'checkin';
-                case 'checkout': return 'checkout';
-                case 'cancel': return 'cancelled';
-                case 'no_show': return 'noshow';
-                case 'reject': return 'rejected';
-                case 'reserve': return 'reserve';
+                case BookingAction.CHECK_IN: return 'checkin';
+                case BookingAction.CHECK_OUT: return 'checkout';
+                case BookingAction.CANCEL: return 'cancelled';
+                case BookingAction.NO_SHOW: return 'noshow';
+                case BookingAction.REJECT: return 'rejected';
+                case BookingAction.RESERVE: return 'reserve';
                 default: return 'default';
             }
         }
@@ -539,7 +526,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                                     alt="GCash Payment Proof"
                                     className="w-full h-auto rounded-lg cursor-zoom-in hover:opacity-90 transition-opacity"
                                     loading="lazy"
-                                    onClick={() => setExpandedImage("paymentProof")}
+                                    onClick={() => setExpandedImage(ExpandedImg.PAYMENT_PROOF)}
                                 />
                             </motion.div>
                         </motion.div>
@@ -575,7 +562,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                                 whileHover={{ scale: 1.02, backgroundColor: "#dc2626" }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => {
-                                    setPendingAction('reject');
+                                    setPendingAction(BookingAction.REJECT);
                                     onReject();
                                 }}
                                 className="px-4 py-2 cursor-pointer bg-red-600 text-white rounded-lg curp transition-colors flex items-center justify-center gap-2 shadow-sm"
@@ -586,7 +573,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                             <motion.button
                                 whileTap={isDownPaymentValid ? { scale: 0.98 } : {}}
                                 onClick={() => {
-                                    setPendingAction('reserve');
+                                    setPendingAction(BookingAction.RESERVE);
                                     if (isDownPaymentValid) onConfirm(currentDownPayment);
                                 }}
                                 className={`px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm ${isDownPaymentValid
@@ -612,7 +599,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                                 <motion.button
                                     whileTap={canMarkNoShow ? { scale: 0.98 } : {}}
                                     onClick={() => {
-                                        setPendingAction('no_show');
+                                        setPendingAction(BookingAction.NO_SHOW);
                                         if (onNoShow && canMarkNoShow) onNoShow();
                                     }}
                                     className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm ${canMarkNoShow
@@ -640,7 +627,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                             <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => {
-                                    setPendingAction('cancel');
+                                    setPendingAction(BookingAction.CANCEL);
                                     if (onCancel) onCancel();
                                 }}
                                 className="px-4 py-2 bg-red-600 text-white rounded-lg cursor-pointer flex items-center justify-center gap-2 shadow-sm"
@@ -652,7 +639,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                                 <motion.button
                                     whileTap={canCheckIn ? { scale: 0.98 } : {}}
                                     onClick={() => {
-                                        setPendingAction('checkin');
+                                        setPendingAction(BookingAction.CHECK_IN);
                                         if (onCheckIn && canCheckIn) onCheckIn(bookingPrice);
                                     }}
                                     className={`px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm ${canCheckIn
@@ -700,7 +687,7 @@ const BookingDetailsModal: FC<BookingDetailProps> = ({ booking, onClose, onConfi
                                 <motion.button
                                     whileTap={canCheckOut ? { scale: 0.95 } : {}}
                                     onClick={() => {
-                                        setPendingAction('checkout');
+                                        setPendingAction(BookingAction.CHECK_OUT);
                                         if (onCheckOut && canCheckOut) onCheckOut();
                                     }}
                                     className={`px-6 py-3 text-white rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md duration-300 ${canCheckOut

@@ -15,6 +15,7 @@ import EventLoader from "../motions/loaders/EventLoader";
 import { createBooking, fetchRoomById } from "../services/Booking";
 import { BookingFormData, ConfirmBookingFormValues, RoomData } from "../types/BookingClient";
 import { formatTime } from "../utils/formatters";
+import { toast } from "react-toastify";
 import { calculateRoomPricing, formatPrice, getDiscountLabel } from "../utils/pricingUtils";
 
 const ConfirmBooking = () => {
@@ -84,8 +85,8 @@ const ConfirmBooking = () => {
   } = useForm<ConfirmBookingFormValues>({
     mode: "onBlur",
     defaultValues: {
-      firstName: userDetails.first_name || "",
-      lastName: userDetails.last_name || "",
+      firstName: userDetails.first_name,
+      lastName: userDetails.last_name,
       phoneNumber: "",
       numberOfGuests: 1,
       arrivalTime: "",
@@ -121,7 +122,6 @@ const ConfirmBooking = () => {
       const end = new Date(selectedDeparture);
       const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Use shared pricing utility
       const pricingResult = calculateRoomPricing({
         roomData,
         userDetails,
@@ -144,9 +144,11 @@ const ConfirmBooking = () => {
 
   const onSubmit: SubmitHandler<ConfirmBookingFormValues> = (data) => {
     if (isSubmitting) return;
-    if (paymentMethod === 'gcash' && !gcashProof) return;
+    if (paymentMethod === 'gcash' && !gcashProof) {
+      toast.error("Please upload GCash payment proof to complete your booking.");
+      return;
+    }
 
-    // Always recalculate the correct discounted price before submission using shared utility
     const start = new Date(selectedArrival);
     const end = new Date(selectedDeparture);
     const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -178,11 +180,9 @@ const ConfirmBooking = () => {
   const handleConfirmBooking = async () => {
     if (!pendingFormData) return;
 
-    if (paymentMethod === 'gcash') {
-      if (!gcashProof) {
-        alert("Please upload GCash payment proof");
-        return;
-      }
+    if (paymentMethod === 'gcash' && !gcashProof) {
+      toast.error("Please upload GCash payment proof to complete your booking.");
+      return;
     }
 
     setShowConfirmModal(false);
@@ -296,7 +296,6 @@ const ConfirmBooking = () => {
         description={(() => {
           if (!roomData) return "Loading...";
 
-          // Use the shared pricing utility for consistency
           const pricingResult = calculateRoomPricing({
             roomData,
             userDetails,

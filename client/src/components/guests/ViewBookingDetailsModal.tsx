@@ -7,12 +7,7 @@ import { BookingDetailsSkeleton } from "../../motions/skeletons/GuestDetailSkele
 import { fetchBookingDetail, generateCheckoutEReceipt } from "../../services/Booking"
 import { generateEReceipt } from "../../utils/reports"
 import BookingData from "../bookings/BookingData"
-
-interface ViewBookingDetailsModalProps {
-    isOpen: boolean;
-    bookingId: number;
-    onClose: () => void;
-}
+import { ViewBookingDetailsModalProps } from "../../types/GuestProfileClient"
 
 const ViewBookingDetailsModal: FC<ViewBookingDetailsModalProps> = ({ isOpen, bookingId, onClose }) => {
     const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);

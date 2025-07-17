@@ -1,14 +1,5 @@
 import { FC } from "react";
-
-interface RoomAvailableProps {
-  image: string;
-  title: string;
-  bedType: string;
-  capacity: number;
-  price: number;
-  availableRooms: number;
-  onBookNow: () => void;
-}
+import { RoomAvailableProps } from "../../types/RoomClient";
 
 const RoomAvailable: FC<RoomAvailableProps> = ({
   image,

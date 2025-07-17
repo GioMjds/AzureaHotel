@@ -15,7 +15,7 @@ export interface PaginationData {
 }
 
 export interface UsersResponse {
-    data: IUser[];
+    users: IUser[];
     pagination: PaginationData;
 }
 
@@ -43,3 +43,5 @@ export interface IUserFormModalProps {
     userData?: IUser | null;
     loading?: boolean;
 }
+
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';

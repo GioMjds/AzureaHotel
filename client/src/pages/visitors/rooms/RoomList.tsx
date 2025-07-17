@@ -5,12 +5,8 @@ import RoomCard from "../../../components/rooms/RoomCard";
 import { useUserContext } from "../../../contexts/AuthContext";
 import DashboardSkeleton from "../../../motions/skeletons/AdminDashboardSkeleton";
 import { fetchAllRooms } from "../../../services/Room";
-import { Room } from "../../../types/RoomClient";
+import { RoomsResponse } from "../../../types/RoomClient";
 import Error from "../../_ErrorBoundary";
-
-interface RoomsResponse {
-  data: Room[];
-}
 
 const RoomList: FC = () => {
   const { userDetails } = useUserContext();

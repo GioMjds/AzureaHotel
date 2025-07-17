@@ -44,26 +44,29 @@ const EditUserModal: FC<IUserFormModalProps> = ({ isOpen, cancel, userData, load
         else toast.error('Rejection reason cannot be empty');
     }
 
-    const handleApprove = () => {
-        approveMutation.mutate();
-    };
+    const handleApprove = () => approveMutation.mutate();
 
     if (!isOpen || !userData) return null;
 
     return (
         <AnimatePresence>
-            <motion.div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <motion.div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-xl mx-4"
-                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-
+            <motion.div
+                className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+                <motion.div
+                    className="bg-white rounded-lg shadow-xl p-6 w-full max-w-xl mx-4"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                >
                     <h2 className="text-2xl font-bold mb-4">Guest ID Verification</h2>
-
                     <div className="flex items-center space-x-2 mb-4">
                         <IdCard className="w-5 h-5 text-purple-600" />
                         <span className="text-lg font-medium">{getValidIdLabel(userData.valid_id_type)}</span>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         {userData.valid_id_front && (
                             <motion.div

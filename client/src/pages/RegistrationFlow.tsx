@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Notification from "../components/Notification";
 import { useUserContext } from "../contexts/AuthContext";
 import { resendOtp, verifyOtp } from "../services/Auth";
+import { NotificationType } from "../types/RegistrationFlowClient";
 
 const RegistrationFlow: FC = () => {
   const [otp, setOTP] = useState<string[]>(Array(6).fill(""));
@@ -14,7 +15,7 @@ const RegistrationFlow: FC = () => {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [notification, setNotification] = useState<{
     message: string;
-    type: "success" | "error" | "info" | "warning";
+    type: NotificationType;
     icon: string;
   } | null>(null);
 
@@ -66,7 +67,7 @@ const RegistrationFlow: FC = () => {
 
       setNotification({
         message: "Verification code has been resent to your email",
-        type: "info",
+        type: NotificationType.SUCCESS,
         icon: "fas fa-paper-plane",
       });
 
@@ -75,7 +76,7 @@ const RegistrationFlow: FC = () => {
       console.error(`Failed to resend OTP: ${error}`);
       setNotification({
         message: "Failed to resend verification code",
-        type: "error",
+        type: NotificationType.ERROR,
         icon: "fas fa-exclamation-circle",
       });
       setTimeout(() => setNotification(null), 3000);
@@ -134,7 +135,7 @@ const RegistrationFlow: FC = () => {
 
           setNotification({
             message: "Registration completed successfully! Redirecting...",
-            type: "success",
+            type: NotificationType.SUCCESS,
             icon: "fas fa-check-circle",
           });
 

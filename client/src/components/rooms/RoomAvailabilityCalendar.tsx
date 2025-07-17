@@ -3,13 +3,10 @@ import { CalendarRange } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Alert from "../Alert";
+import { RoomAvailabilityCalendarProps } from "../../types/RoomClient";
 
 const ARRIVAL_DATE_KEY = "hotel_arrival_date";
 const DEPARTURE_DATE_KEY = "hotel_departure_date";
-
-interface RoomAvailabilityCalendarProps {
-  onDatesChange?: (arrival: string, departure: string) => void;
-}
 
 const RoomAvailabilityCalendar = memo(({ onDatesChange }: RoomAvailabilityCalendarProps) => {
   const navigate = useNavigate();

@@ -3,44 +3,43 @@ import { AlertCircle, Calendar, CheckCircle2, Clock, CreditCard, User, Watch, XC
 import { FC, ReactNode, memo, useMemo } from "react";
 import { BookingCardProps } from "../../types/BookingGuest";
 import { formatCurrency, formatStatus, formatTime } from "../../utils/formatters";
+import { Statuses } from "../../types/BookingClient";
 
 const getStatusInfo = (status: string): { color: string; icon: ReactNode } => {
   const normalizedStatus = status.toLowerCase();
 
   switch (normalizedStatus) {
-    case 'confirmed':
+    case Statuses.CONFIRMED:
       return {
         color: 'bg-green-100 text-green-700 border-green-300',
         icon: <CheckCircle2 className="w-4 h-4 mr-1" />
       };
-    case 'pending':
+    case Statuses.PENDING:
       return {
         color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
         icon: <Clock className="w-4 h-4 mr-1" />
       };
-    case 'cancelled':
+    case Statuses.CANCELLED:
       return {
         color: 'bg-red-100 text-red-700 border-red-300',
         icon: <XCircle className="w-4 h-4 mr-1" />
       };
-    case 'rejected':
+    case Statuses.REJECTED:
       return {
         color: 'bg-red-100 text-red-700 border-red-300',
         icon: <XCircle className="w-4 h-4 mr-1" />
       };
-    case 'reserved':
+    case Statuses.RESERVED:
       return {
         color: 'bg-blue-100 text-blue-700 border-blue-300',
         icon: <CheckCircle2 className="w-4 h-4 mr-1" />
       };
-    case 'checked_in':
-    case 'checked in':
+    case Statuses.CHECKED_IN:
       return {
         color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
         icon: <CheckCircle2 className="w-4 h-4 mr-1" />
       };
-    case 'checked_out':
-    case 'checked out':
+    case Statuses.CHECKED_OUT:
       return {
         color: 'bg-purple-100 text-purple-700 border-purple-300',
         icon: <CheckCircle2 className="w-4 h-4 mr-1" />

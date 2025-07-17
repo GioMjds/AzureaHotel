@@ -17,7 +17,7 @@ export interface MobileOrder {
     | "ready"
     | "completed"
     | "cancelled";
-  payment_ss: string; // base64 encoded payment screenshot
+  payment_ss: string;
   cancellation_reason?: string;
 }
 

@@ -371,6 +371,7 @@ const GuestCancellations: FC = () => {
 
       {showBookingDetailModal && (
         <ViewBookingDetailsModal
+          isOpen={showBookingDetailModal}
           bookingId={selectedBookingId}
           onClose={() => {
             setShowBookingDetailModal(false);

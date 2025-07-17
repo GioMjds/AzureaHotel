@@ -5,16 +5,12 @@ import VenueCard from "../../../components/areas/VenueCard";
 import { useUserContext } from "../../../contexts/AuthContext";
 import ContentLoader from "../../../motions/loaders/ContentLoader";
 import { fetchAreas } from "../../../services/Area";
-import { Area } from "../../../types/AreaClient";
-
-interface AreaResponse {
-  data: Area[];
-}
+import { AreasResponse } from "../../../types/AreaClient";
 
 const VenueList: FC = () => {
   const { userDetails } = useUserContext();
 
-  const { data: areasData, isLoading, isError } = useQuery<AreaResponse>({
+  const { data: areasData, isLoading, isError } = useQuery<AreasResponse>({
     queryKey: ["venues"],
     queryFn: fetchAreas,
   });

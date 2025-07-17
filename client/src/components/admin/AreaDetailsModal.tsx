@@ -1,13 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { FC, useEffect, useMemo, useState } from "react";
 import { MemoizedImage } from "../../memo/MemoizedImage";
-import { Area } from "../../types/AreaClient";
-
-interface AreaDetailsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    areaData: Area | null;
-}
+import { AreaDetailsModalProps } from "../../types/AreaClient";
 
 const AreaDetailsModal: FC<AreaDetailsModalProps> = ({ isOpen, onClose, areaData }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
@@ -32,7 +26,9 @@ const AreaDetailsModal: FC<AreaDetailsModalProps> = ({ isOpen, onClose, areaData
         setCurrentImageIndex(idx);
         setIsFullScreen(true);
     };
+
     const closeFullScreen = () => setIsFullScreen(false);
+    
     const handleNextImage = () => {
         if (areaImages.length > 1) {
             setCurrentImageIndex((prev) => (prev + 1) % areaImages.length);
@@ -43,7 +39,9 @@ const AreaDetailsModal: FC<AreaDetailsModalProps> = ({ isOpen, onClose, areaData
             setCurrentImageIndex((prev) => (prev - 1 + areaImages.length) % areaImages.length);
         }
     };
+
     if (!areaData) return null;
+
     return (
         <AnimatePresence mode="wait">
             {isOpen && (

@@ -15,11 +15,11 @@ import { Room } from "../types/RoomClient";
 import Error from "./_ErrorBoundary";
 
 const RoomDetails = () => {
-  const [selectedImageIdx, setSelectedImageIdx] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
   const { isAuthenticated, userDetails } = useUserContext();
   const { id } = useParams<{ id: string }>();
+  
+  const [selectedImageIdx, setSelectedImageIdx] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const navigate = useNavigate();
   const pageSize: number = 5;
@@ -41,15 +41,11 @@ const RoomDetails = () => {
     enabled: !!id,
   });
 
-  if (isLoadingRoom) return <RoomAndAreaDetailsSkeleton />;
-  if (roomError) return <Error />;
-
   const roomDetail = roomData?.data;
   if (!roomDetail) {
     return <div className="text-center mt-4">No room details available</div>;
   }
 
-  // Image gallery state
   const images = roomDetail.images && roomDetail.images.length > 0
     ? roomDetail.images.map((img) => img.room_image)
     : [];
@@ -77,7 +73,6 @@ const RoomDetails = () => {
 
   const reviews = reviewsData?.data || [];
 
-  // Discount logic similar to RoomCard
   const isSeniorOrPwd = userDetails?.is_senior_or_pwd;
   const parsePrice = (val: number | string) => {
     if (!val) return null;
@@ -96,7 +91,6 @@ const RoomDetails = () => {
     const originalPrice = parsePrice(roomDetail.room_price);
 
     if (isSeniorOrPwd) {
-      // For senior/PWD users, compare available discounts and pick the best (lowest price)
       const availableDiscounts = [];
 
       if (adminDiscounted !== null && adminDiscounted < originalPrice) {
@@ -108,14 +102,12 @@ const RoomDetails = () => {
       }
 
       if (availableDiscounts.length > 0) {
-        // Pick the discount with the lowest price
         const bestDiscount = availableDiscounts.reduce((best, current) =>
           current.price < best.price ? current : best
         );
         displayDiscountedPrice = bestDiscount.price;
       }
     } else {
-      // For non-senior users, only apply admin discount if available
       if (adminDiscounted !== null && adminDiscounted < originalPrice) {
         displayDiscountedPrice = adminDiscounted;
       }
@@ -159,6 +151,9 @@ const RoomDetails = () => {
       }
     }
   };
+
+  if (isLoadingRoom) return <RoomAndAreaDetailsSkeleton />;
+  if (roomError) return <Error />;
 
   return (
     <motion.div

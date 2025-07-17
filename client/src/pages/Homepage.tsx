@@ -1,4 +1,4 @@
-import Hero from "../layout/Hero";
+import Hero from "./visitors/home/Hero";
 import ImageSlider from "./visitors/home/ImageSlider";
 import Services from "./visitors/home/Services";
 

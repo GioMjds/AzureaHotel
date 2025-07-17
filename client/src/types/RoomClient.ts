@@ -1,3 +1,5 @@
+import { IRoom } from "./RoomAdmin";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Amenity {
   id: number;
@@ -26,8 +28,18 @@ export interface Room {
   senior_discounted_price?: number | null;
 }
 
+export interface RoomsResponse {
+  data: Room[];
+  pagination: PaginationData;
+}
+
 export interface AddRoomResponse {
   data: any;
+}
+
+export interface AmenityResponse {
+  data: Amenity[];
+  pagination?: PaginationData;
 }
 
 export interface PaginationData {
@@ -48,4 +60,24 @@ export interface RoomCardProps {
   discounted_price?: number;
   discount_percent?: number;
   senior_discounted_price?: number;
+}
+
+export interface RoomAvailableProps {
+  image: string;
+  title: string;
+  bedType: string;
+  capacity: number;
+  price: number;
+  availableRooms: number;
+  onBookNow: () => void;
+}
+
+export interface RoomAvailabilityCalendarProps {
+  onDatesChange?: (arrival: string, departure: string) => void;
+}
+
+export interface IViewRoomModalProps {
+    isOpen: boolean;
+    roomData: IRoom | null;
+    onClose: () => void;
 }

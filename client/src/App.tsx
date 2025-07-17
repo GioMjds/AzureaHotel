@@ -1,8 +1,6 @@
-import AOS from "aos";
-import "aos/dist/aos.css";
+import "./App.css";
 import { Suspense, lazy, useEffect, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import "./App.css";
 import ScrollToTop from "./components/ScrollToTop";
 import { useUserContext } from "./contexts/AuthContext";
 import ProtectedRoute from "./contexts/ProtectedRoutes";
@@ -25,7 +23,6 @@ const BookingAccepted = lazy(() => import("./motions/BookingAccepted"));
 
 const BookingCalendar = lazy(() => import("./pages/BookingCalendar"));
 const VenueBookingCalendar = lazy(() => import("./pages/VenueBookingCalendar"));
-const CancelReservation = lazy(() => import("./pages/CancelReservation"));
 const VenueDetails = lazy(() => import("./pages/VenueDetails"));
 
 const AdminLayout = lazy(() => import("./layout/admin/AdminLayout"));
@@ -47,14 +44,6 @@ const App = () => {
   const { isAuthenticated, role } = useUserContext();
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    AOS.init({
-      offset: 100,
-      duration: 700,
-      delay: 100,
-    });
-  }, []);
 
   useEffect(() => {
     const redirectPath = sessionStorage.getItem('redirectAfterReload');
@@ -97,7 +86,6 @@ const App = () => {
           <Route path="/booking/:roomId" element={<BookingCalendar />} />
           <Route path="/availability" element={<AvailabilityResults />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/cancel-reservation" element={<CancelReservation />} />
 
           {/* Protected guest routes */}
           <Route element={<ProtectedRoute requiredRole="guest" />}>

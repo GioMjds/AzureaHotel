@@ -1,17 +1,9 @@
+import { FC } from "react";
 import { motion } from "framer-motion";
 import { Star, User } from "lucide-react";
-import { ReviewData } from "../../types/ReviewsClient";
+import { ReviewListProps } from "../../types/ReviewsClient";
 
-interface ReviewListProps {
-    reviews: ReviewData[];
-    isLoading: boolean;
-    error: Error | null;
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-}
-
-const ReviewList = ({ reviews, isLoading, error, currentPage, totalPages, onPageChange }: ReviewListProps) => {
+const ReviewList: FC<ReviewListProps> = ({ reviews, isLoading, error, currentPage, totalPages, onPageChange }) => {
     if (isLoading) {
         return (
             <div className="flex justify-center py-8">

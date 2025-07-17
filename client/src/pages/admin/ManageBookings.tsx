@@ -22,7 +22,6 @@ import { adminRejectionReasons } from "../../constants/Dropdown";
 const ManageBookings: FC = () => {
   const { userDetails } = useUserContext();
 
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBooking, setSelectedBooking] = useState<BookingResponse | null>(null);
@@ -30,7 +29,8 @@ const ManageBookings: FC = () => {
   const [showNoShowModal, setShowNoShowModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
-
+  
+  const queryClient = useQueryClient();
   const pageSize = 9;
 
   const { data: bookingsResponse, error, isLoading } = useQuery<BookingQuery>({

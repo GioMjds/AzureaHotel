@@ -3,19 +3,7 @@ import { FC, useEffect, useState } from "react"
 import { IdCard, X, AlertCircle } from "lucide-react"
 import { useForm, SubmitHandler } from "react-hook-form"
 import { ID_TYPE_OPTIONS } from "../../constants/GuestProfileOptions"
-
-interface ValidIDUploadModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onUpload: (idType: string, front: File, back: File) => void;
-    isLoading: boolean;
-}
-
-interface FormInputs {
-    idType: string;
-    frontFile: FileList;
-    backFile: FileList;
-}
+import { FormInputs, ValidIDUploadModalProps } from "../../types/GuestProfileClient"
 
 const ValidIDUploadModal: FC<ValidIDUploadModalProps> = ({ isOpen, onClose, onUpload, isLoading }) => {
     const [frontPreview, setFrontPreview] = useState<string | null>(null);

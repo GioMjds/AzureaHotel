@@ -9,10 +9,8 @@ import Modal from "../../components/Modal";
 import EventLoader from "../../motions/loaders/EventLoader";
 import ManageAmenitiesSkeleton from "../../motions/skeletons/ManageAmenitiesSkeleton";
 import { archiveUser, fetchAllUsers } from "../../services/Admin";
-import { IUser } from "../../types/UsersAdmin";
+import { IUser, VerificationStatus } from "../../types/UsersAdmin";
 import Error from "../_ErrorBoundary";
-
-type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
 
 const ManageUsers: FC = () => {
   const [selectedUser, setSelectedUser] = useState<IUser | null>(null);

@@ -15,7 +15,6 @@ const EventLoader: FC<LoaderProps> = ({
   const [step, setStep] = useState(0);
   const [flare, setFlare] = useState({ x: 0, y: 0, show: false });
 
-  // Use useCallback for animation functions
   const updateProgress = useCallback(() => {
     setProgress(prev => {
       const newProgress = prev + (1 - prev / 100) * 2;

@@ -12,3 +12,12 @@ export interface ReviewData {
         check_out_date: string;
     }
 }
+
+export interface ReviewListProps {
+    reviews: ReviewData[];
+    isLoading: boolean;
+    error: Error | null;
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+}

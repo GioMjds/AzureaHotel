@@ -669,6 +669,7 @@ def delete_amenity(request, pk):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def admin_bookings(request):
     try:
         exclude_statuses = [
@@ -1516,7 +1517,6 @@ def area_bookings(request):
             response_data["booking_counts"].append(area_bookings)
         
         return Response(response_data, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1600,7 +1600,6 @@ def room_bookings(request):
             response_data["booking_counts"].append(room_bookings)
         
         return Response(response_data, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
             "error": str(e)
@@ -1659,6 +1658,7 @@ def daily_no_shows_rejected(request):
 
 # Commission Tracking APIs
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def commission_stats(request):
     try:
         date_filter = request.GET.get('filter', 'month')
@@ -1702,6 +1702,7 @@ def commission_stats(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def commission_daily_data(request):
     try:
         month = int(request.GET.get('month', timezone.now().month))
@@ -1737,6 +1738,7 @@ def commission_daily_data(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def commission_by_room(request):
     try:
         date_filter = request.GET.get('filter', 'month')
@@ -1791,6 +1793,7 @@ def commission_by_room(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def commission_detailed_orders(request):
     try:
         page = int(request.GET.get('page', 1))
@@ -1854,6 +1857,7 @@ def commission_detailed_orders(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def top_commissions(request):
     try:
         limit = int(request.GET.get('limit', 10))
@@ -1988,6 +1992,7 @@ def update_commission_status(request, commission_id):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def sync_craveon_orders(request):
     try:
         return Response({

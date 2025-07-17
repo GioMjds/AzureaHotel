@@ -81,15 +81,14 @@ const EditRoomModal: FC<IRoomFormModalProps> = ({ isOpen, cancel, onSave, roomDa
             <div className="flex flex-wrap gap-2">
                 {images.map((img: any, idx: number) => {
                     const src = typeof img === 'string' ? img : URL.createObjectURL(img);
-                    const isExistingImage = typeof img === 'string';
-
+                    
                     return (
                         <div key={idx} className="relative inline-block">
                             <img
                                 src={src}
                                 alt={`Preview ${idx + 1}`}
                                 className="w-20 h-20 object-cover border border-gray-200 rounded-md shadow-sm mt-4"
-                                onLoad={!isExistingImage ? () => URL.revokeObjectURL(src) : undefined}
+                                loading="lazy"
                             />
                             <motion.button
                                 type="button"

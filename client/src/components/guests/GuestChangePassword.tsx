@@ -4,12 +4,7 @@ import { AlertCircle, ArrowLeft, CheckCircle, Eye, EyeOff, KeyRound, Lock, Save 
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changePassword } from '../../services/Auth';
-
-interface PasswordFields {
-    oldPassword: string;
-    newPassword: string;
-    confirmPassword: string;
-}
+import { PasswordFields } from '../../types/GuestProfileClient';
 
 const GuestChangePassword = () => {
     const navigate = useNavigate();

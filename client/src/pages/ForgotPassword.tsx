@@ -6,25 +6,7 @@ import { useUserContext } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
-
-enum Step {
-  email = 'email',
-  otp = 'otp',
-  newPassword = 'newPassword'
-}
-
-interface EmailFormData {
-  email: string;
-}
-
-interface OtpFormData {
-  otp: string;
-}
-
-interface PasswordFormData {
-  newPassword: string;
-  confirmPassword: string;
-}
+import { Step, EmailFormData, OtpFormData, PasswordFormData } from "../types/ForgotPasswordClient";
 
 const ForgotPassword: FC = () => {
   const navigate = useNavigate();

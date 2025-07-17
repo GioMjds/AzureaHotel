@@ -1,11 +1,5 @@
 import { FC, memo } from "react";
-
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    borderColor: string;
-    tooltip?: string;
-}
+import { StatCardProps } from "../../types/DashboardTypes";
 
 const StatCard: FC<StatCardProps> = ({ title, value, borderColor, tooltip }) => {
     return (

@@ -891,7 +891,7 @@ export const calculateCommissionFromMobileOrders = (
     };
   }
 
-  const commissionRate = 0.2; // 20% commission rate
+  const commissionRate = 0.2;
   let totalOrders = 0;
   let totalSales = 0;
   let completedOrders = 0;
@@ -901,20 +901,18 @@ export const calculateCommissionFromMobileOrders = (
     customer.orders.forEach((order) => {
       const orderDate = new Date(order.ordered_at);
 
-      // Filter by selected month and year if provided
       if (selectedMonth && selectedYear) {
-        const orderMonth = orderDate.getMonth() + 1; // getMonth() returns 0-11
+        const orderMonth = orderDate.getMonth() + 1;
         const orderYear = orderDate.getFullYear();
 
         if (orderMonth !== selectedMonth || orderYear !== selectedYear) {
-          return; // Skip this order if it doesn't match the selected month/year
+          return;
         }
       }
 
       totalOrders++;
       totalSales += order.total_amount;
 
-      // Only count completed orders for commission calculation
       if (order.status === "completed") {
         completedOrders++;
         completedSales += order.total_amount;

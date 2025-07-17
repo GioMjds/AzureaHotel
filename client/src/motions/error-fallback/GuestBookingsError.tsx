@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { FC } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface GuestBookingsErrorProps {
@@ -10,7 +11,7 @@ interface GuestBookingsErrorProps {
     refetch?: () => void;
 }
 
-const GuestBookingsError = ({ error, refetch }: GuestBookingsErrorProps) => {
+const GuestBookingsError: FC<GuestBookingsErrorProps> = ({ error, refetch }) => {
     const navigate = useNavigate();
     const statusCode = error?.status;
     

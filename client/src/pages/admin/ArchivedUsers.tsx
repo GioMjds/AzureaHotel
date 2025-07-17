@@ -6,7 +6,7 @@ import { FC, useCallback, useState } from "react";
 import { toast } from "react-toastify";
 import DefaultProfilePic from "../../assets/Default_pfp.jpg";
 import { fetchAllUsers, restoreUser } from "../../services/Admin";
-import { IUser } from "../../types/UsersAdmin";
+import { IUser, UsersResponse } from "../../types/UsersAdmin";
 import Modal from "../../components/Modal";
 import EventLoader from "../../motions/loaders/EventLoader";
 import Error from "../_ErrorBoundary";
@@ -15,21 +15,13 @@ import ManageAmenitiesSkeleton from "../../motions/skeletons/ManageAmenitiesSkel
 const ArchivedUsers: FC = () => {
     const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
     const [showRestoreModal, setShowRestoreModal] = useState<boolean>(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
     const queryClient = useQueryClient();
     const pageSize = 6;
 
-    const { data, isLoading, isError } = useQuery<{
-        users: IUser[];
-        pagination: {
-            total_pages: number;
-            current_page: number;
-            total_items: number;
-            page_size: number;
-        }
-    }>({
+    const { data, isLoading, isError } = useQuery<UsersResponse>({
         queryKey: ["archived-users", currentPage],
         queryFn: () => fetchAllUsers(currentPage, pageSize, true),
     });
@@ -42,9 +34,8 @@ const ArchivedUsers: FC = () => {
             setShowRestoreModal(false);
             setIsSubmitting(false);
         },
-        onError: (error: Error | { response?: { data?: { error?: string } } }) => {
-            const errorResponse = error as { response?: { data?: { error?: string } } };
-            toast.error(errorResponse.response?.data?.error || "Failed to restore user");
+        onError: (error: string) => {
+            toast.error(`Failed to restore user: ${error}`);
             setIsSubmitting(false);
         }
     });

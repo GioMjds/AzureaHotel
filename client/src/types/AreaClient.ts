@@ -30,12 +30,13 @@ export interface AreaCardProps {
     senior_discounted_price?: number;
 }
 
-export interface AreasResponse {
-    data: Area[];
-}
-
 export interface AddAreaResponse {
     data: any;
+}
+
+export interface AreasResponse {
+    data: Area[];
+    pagination: PaginationData;
 }
 
 export interface PaginationData {
@@ -43,4 +44,10 @@ export interface PaginationData {
     current_page: number;
     total_items: number;
     page_size: number;
+}
+
+export interface AreaDetailsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    areaData: Area | null;
 }

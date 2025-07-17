@@ -37,7 +37,6 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
   let displayDiscountPercent = 0;
 
   if (isSeniorOrPwd) {
-    // For senior/PWD users, compare available discounts and pick the best (lowest price)
     const availableDiscounts = [];
 
     if (adminDiscounted !== null && adminDiscounted < originalPrice) {
@@ -49,7 +48,6 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
     }
 
     if (availableDiscounts.length > 0) {
-      // Pick the discount with the lowest price
       const bestDiscount = availableDiscounts.reduce((best, current) =>
         current.price < best.price ? current : best
       );
@@ -57,7 +55,6 @@ const VenueCard: FC<AreaCardProps> = ({ id, title, priceRange, image, images, de
       displayDiscountPercent = bestDiscount.percent;
     }
   } else {
-    // For non-senior users, only apply count if available
     if (adminDiscounted !== null && adminDiscounted < originalPrice) {
       displayDiscountedPrice = discounted_price;
       displayDiscountPercent = discount_percent ?? 0;

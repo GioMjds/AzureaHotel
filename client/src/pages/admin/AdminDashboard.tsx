@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from "chart.js";
 import { format, getDay, isAfter, isSameDay, parse, startOfWeek } from "date-fns";
@@ -10,7 +9,6 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Doughnut } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import MobileOrdersSection from "../../components/admin/MobileOrdersSection";
 import StatCard from "../../components/admin/StatCard";
 import DashboardSkeleton from "../../motions/skeletons/AdminDashboardSkeleton";
 import {
@@ -31,6 +29,7 @@ import {
 import "../../styles/report-modal.css";
 import { formatCurrency, formatMonthYear, getDaysInMonth } from "../../utils/formatters";
 import { generateNativePDF, prepareMonthlyReportData } from "../../utils/monthlyReportGenerator";
+import { ViewType, CalendarEvent, EventComponentProps } from "../../types/DashboardTypes";
 import Error from "../_ErrorBoundary";
 
 Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -46,8 +45,7 @@ const localizer = dateFnsLocalizer({
 
 const AdminDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [view, setView] = useState<'month' | 'week' | 'day'>("month");
-  const [showCommissionSection, setShowCommissionSection] = useState(false);
+  const [view, setView] = useState<ViewType>(ViewType.MONTH);
 
   const bookingStatusChartRef = useRef<HTMLDivElement>(null);
   const areaRevenueChartRef = useRef<HTMLDivElement>(null);
@@ -134,7 +132,7 @@ const AdminDashboard = () => {
     queryKey: ['calendarEvents', selectedMonth, selectedYear, dailyRevenueData, dailyBookingsResponse, dailyCancellationsResponse, dailyNoShowsRejectedResponse],
     queryFn: async () => {
       const daysInMonthArray = getDaysInMonth(selectedMonth, selectedYear, true);
-      const events: any[] = [];
+      const events: CalendarEvent[] = [];
 
       const dailyRevenueValues = dailyRevenueData || [];
       const dailyBookingsData = dailyBookingsResponse?.data || [];
@@ -214,7 +212,7 @@ const AdminDashboard = () => {
   const areaBookingValues = areaBookingsResponse?.booking_counts || [];
 
   const handleViewChange = (newView: string) => {
-    setView(newView as 'month' | 'week' | 'day');
+    setView(newView as ViewType);
   };
 
   const handleNavigate = (date: Date) => {
@@ -268,8 +266,7 @@ const AdminDashboard = () => {
     window.open(pdfUrl, '_blank');
   };
 
-
-  const EventComponent = ({ event }: { event: any }) => {
+  const EventComponent = ({ event }: EventComponentProps) => {
     const resource = event.resource;
 
     return (
@@ -377,12 +374,6 @@ const AdminDashboard = () => {
       <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-gray-800">Food Orders Commission</h2>
-          <button
-            onClick={() => setShowCommissionSection(!showCommissionSection)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {showCommissionSection ? 'Hide Details' : 'Show Details'}
-          </button>
         </div>
 
         {/* Commission Summary Cards */}
@@ -610,11 +601,6 @@ const AdminDashboard = () => {
           />
         </div>
       </motion.div>
-
-      {/* Mobile Orders Section */}
-      <div className="mt-6">
-        <MobileOrdersSection />
-      </div>
     </div>
   );
 };

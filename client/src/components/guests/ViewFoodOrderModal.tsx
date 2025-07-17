@@ -1,16 +1,11 @@
 import { FC } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFoodOrders, FoodOrder } from "../../services/Food";
+import { fetchFoodOrders } from "../../services/Food";
 import { X, ChefHat, Clock } from "lucide-react";
+import { FoodOrder, ViewFoodOrderModalProps } from "../../types/GuestProfileClient";
 
-interface ViewFoodOrderModalProps {
-    orderId: string | number;
-    visible: boolean;
-    onClose: () => void;
-}
-
-const  ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onClose }) => {
+const ViewFoodOrderModal: FC<ViewFoodOrderModalProps> = ({ orderId, visible, onClose }) => {
     const { data, isLoading, error } = useQuery({
         queryKey: ['foodOrderDetails', orderId],
         queryFn: () => fetchFoodOrders(),

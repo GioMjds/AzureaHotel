@@ -5,26 +5,18 @@ import { Loader2, Minus, Plus, Search, ShoppingCart, Upload, X } from "lucide-re
 import { FC, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import GCashQRCode from "../../assets/GCash_FoodOrder.jpg";
-import { fetchCraveOnFoods, FoodItem, placeFoodOrder } from "../../services/Food";
+import { fetchCraveOnFoods, placeFoodOrder } from "../../services/Food";
 import Modal from "../Modal";
-
-interface OrderItem extends FoodItem {
-    quantity: number;
-}
-
-interface OrderFoodModalProps {
-    bookingId: number | null;
-    isOpen: boolean;
-    onClose: () => void;
-}
+import { OrderFoodModalProps, OrderItem } from "../../types/GuestProfileClient";
+import { FoodItem } from "../../types/GuestProfileClient";
 
 const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose }) => {
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [showCart, setShowCart] = useState<boolean>(false);
-    const [showPaymentSection, setShowPaymentSection] = useState(false);
-    const [showFinalConfirmModal, setShowFinalConfirmModal] = useState(false);
+    const [showPaymentSection, setShowPaymentSection] = useState<boolean>(false);
+    const [showFinalConfirmModal, setShowFinalConfirmModal] = useState<boolean>(false);
     const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
     const [paymentPreview, setPaymentPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);

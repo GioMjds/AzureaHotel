@@ -132,3 +132,24 @@ export interface BookingCardProps {
   downPayment?: number;
   bookingId?: string | number;
 }
+
+export interface GCashPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onProofSubmit: (file: File, preview: string) => void;
+  onProofRemove?: () => void;
+  initialPreview?: string | null;
+  totalPrice?: number;
+}
+
+export interface GuestBookingCommentProps {
+  bookingId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  bookingDetails?: {
+    propertyName: string;
+    propertyType: "room" | "venue";
+    checkInDate: string;
+    checkOutDate: string;
+  };
+}

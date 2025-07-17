@@ -1,25 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { FC, useEffect, useState } from "react";
-
-export interface IRoom {
-    id: number;
-    roomName: string;
-    roomImage: string | File;
-    roomAdmission: "Regular" | "VIP";
-    roomType: string;
-    bedType: string;
-    roomNumber: string;
-    status: "Available" | "Occupied" | "Maintenance";
-    roomPrice: number;
-    description: string;
-    pax: number;
-}
-
-interface IViewRoomModalProps {
-    isOpen: boolean;
-    roomData: IRoom | null;
-    onClose: () => void;
-}
+import { IViewRoomModalProps } from "../../types/RoomClient";
 
 const ViewRoomModal: FC<IViewRoomModalProps> = ({ isOpen, roomData, onClose }) => {
     const [imageSrc, setImageSrc] = useState<string>("");

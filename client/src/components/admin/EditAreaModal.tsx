@@ -60,14 +60,13 @@ const EditAreaModal: FC<IAreaFormModalProps> = ({ onSave, areaData, isOpen, canc
       <div className="flex flex-wrap gap-2">
         {images.map((img: any, idx: number) => {
           const src = typeof img === 'string' ? img : URL.createObjectURL(img);
-          const isExistingImage = typeof img === 'string';
           return (
             <div key={idx} className="relative group">
               <img
                 src={src}
                 alt={`Preview ${idx + 1}`}
                 className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm mt-4"
-                onLoad={!isExistingImage ? () => URL.revokeObjectURL(src) : undefined}
+                loading="lazy"
               />
               <motion.button
                 type="button"

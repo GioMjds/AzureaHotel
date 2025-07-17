@@ -58,6 +58,19 @@ export interface BookingResponse {
   down_payment?: number;
 }
 
+export interface BookingDetailProps {
+    booking: BookingResponse;
+    onClose: () => void;
+    onConfirm: (downPaymentAmount?: number) => void;
+    onReject: () => void;
+    onCheckIn?: (paymentAmount: number) => void;
+    onCheckOut?: () => void;
+    onNoShow?: () => void;
+    onCancel?: () => void;
+    canManage: boolean;
+    isUpdating: boolean;
+}
+
 export interface BookingFormData {
   firstName: string;
   lastName: string;
@@ -194,4 +207,42 @@ export interface ConfirmBookingFormValues {
   specialRequests: string;
   paymentMethod: "physical" | "gcash";
   paymentProof: File | boolean | null;
+}
+
+export enum ExpandedImg {
+    VALID_ID = 'validId',
+    PAYMENT_PROOF = 'paymentProof'
+}
+
+export enum BookingAction {
+    CHECK_IN = 'checkin',
+    CHECK_OUT = 'checkout',
+    CANCEL = 'cancel',
+    REJECT = 'reject',
+    NO_SHOW = 'noshow',
+    RESERVE = 'reserve'
+}
+
+export enum Statuses {
+    CONFIRMED = 'confirmed',
+    PENDING = 'pending',
+    CANCELLED = 'cancelled',
+    REJECTED = 'rejected',
+    RESERVED = 'reserved',
+    CHECKED_IN = 'checked_in',
+    CHECKED_OUT = 'checked_out'
+}
+
+export interface CancellationModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (reason: string) => void;
+    bookingId?: string | number;
+    title?: string;
+    description?: string;
+    reasonLabel?: string;
+    reasonPlaceholder?: string;
+    confirmButtonText?: string;
+    showPolicyNote?: boolean;
+    reasons?: string[];
 }

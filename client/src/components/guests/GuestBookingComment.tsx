@@ -4,18 +4,7 @@ import { Loader2, Send, Star, X } from "lucide-react";
 import { FC, useState } from "react";
 import { toast } from "react-toastify";
 import { createReview } from "../../services/Booking";
-
-interface GuestBookingCommentProps {
-    bookingId: string;
-    isOpen: boolean;
-    onClose: () => void;
-    bookingDetails?: {
-        propertyName: string;
-        propertyType: "room" | "venue";
-        checkInDate: string;
-        checkOutDate: string;
-    };
-}
+import { GuestBookingCommentProps } from "../../types/BookingGuest";
 
 const GuestBookingComment: FC<GuestBookingCommentProps> = ({ bookingId, isOpen, onClose, bookingDetails }) => {
     const [rating, setRating] = useState<number>(0);

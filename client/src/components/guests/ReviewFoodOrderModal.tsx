@@ -3,13 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChefHat, Star, X } from "lucide-react";
 import { FC, useState } from "react";
 import { toast } from "react-toastify";
-import { FoodOrder, reviewFoodOrder, ReviewFoodOrderData } from "../../services/Food";
-
-interface ReviewFoodOrderModalProps {
-    order: FoodOrder | null;
-    visible: boolean;
-    onClose: () => void;
-}
+import { reviewFoodOrder } from "../../services/Food";
+import { ReviewFoodOrderData, ReviewFoodOrderModalProps } from "../../types/GuestProfileClient";
 
 const ReviewFoodOrderModal: FC<ReviewFoodOrderModalProps> = ({ order, visible, onClose }) => {
     const [rating, setRating] = useState(0);

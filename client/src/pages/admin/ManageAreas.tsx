@@ -12,7 +12,7 @@ import EventLoader from "../../motions/loaders/EventLoader";
 import ManageSkeleton from "../../motions/skeletons/ManageSkeleton";
 import { addNewArea, deleteArea, editArea, fetchAreas } from "../../services/Admin";
 import { IArea } from "../../types/AreaAdmin";
-import { AddAreaResponse, Area, PaginationData } from "../../types/AreaClient";
+import { AddAreaResponse, Area, AreasResponse } from "../../types/AreaClient";
 import Error from "../_ErrorBoundary";
 
 const ManageAreas = () => {
@@ -29,10 +29,7 @@ const ManageAreas = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: areasResponse, isLoading, isError } = useQuery<{
-    data: Area[];
-    pagination: PaginationData;
-  }>({
+  const { data: areasResponse, isLoading, isError } = useQuery<AreasResponse>({
     queryKey: ["areas", currentPage, pageSize],
     queryFn: () => fetchAreas(currentPage, pageSize),
     staleTime: 1000 * 60 * 5,

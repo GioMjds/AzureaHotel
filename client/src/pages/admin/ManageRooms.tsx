@@ -143,6 +143,7 @@ const ManageRooms = () => {
       id: room.id,
       roomName: room.room_name,
       images: images,
+      roomImage: images[0],
       roomType: room.room_type,
       bedType: room.bed_type,
       status: room.status === "available" ? "Available" : "Maintenance",

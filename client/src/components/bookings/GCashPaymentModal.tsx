@@ -2,15 +2,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { ChangeEvent, FC, useEffect, useState } from "react"
 import GCashMOP1 from "../../assets/GCash_MOP1.jpg";
 import GCashMOP2 from "../../assets/GCash_MOP2.jpg";
-
-interface GCashPaymentModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onProofSubmit: (file: File, preview: string) => void;
-    onProofRemove?: () => void;
-    initialPreview?: string | null;
-    totalPrice?: number;
-}
+import { GCashPaymentModalProps } from "../../types/BookingGuest";
 
 const GCashPaymentModal: FC<GCashPaymentModalProps> = ({ isOpen, onClose, onProofSubmit, onProofRemove, initialPreview, totalPrice }) => {
     const [preview, setPreview] = useState<string | null>(null);

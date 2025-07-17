@@ -1,19 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { FC, useEffect, useState } from 'react';
-
-interface CancellationModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: (reason: string) => void;
-    bookingId?: string | number;
-    title?: string;
-    description?: string;
-    reasonLabel?: string;
-    reasonPlaceholder?: string;
-    confirmButtonText?: string;
-    showPolicyNote?: boolean;
-    reasons?: string[];
-}
+import { CancellationModalProps } from '../../types/BookingClient';
 
 const CancellationModal: FC<CancellationModalProps> = ({
     isOpen,
@@ -27,10 +14,10 @@ const CancellationModal: FC<CancellationModalProps> = ({
     showPolicyNote = true,
     reasons
 }) => {
-    const [selectedReason, setSelectedReason] = useState('');
-    const [otherReason, setOtherReason] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
+    const [selectedReason, setSelectedReason] = useState<string>('');
+    const [otherReason, setOtherReason] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [error, setError] = useState<string>('');
 
     const isOther = selectedReason === 'Other (please specify)';
     const dropdownReasons = reasons || [];
@@ -46,7 +33,6 @@ const CancellationModal: FC<CancellationModalProps> = ({
         onConfirm(reasonToSend);
     };
 
-    // Reset state when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             setSelectedReason('');
@@ -57,7 +43,7 @@ const CancellationModal: FC<CancellationModalProps> = ({
     }, [isOpen]);
 
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {isOpen && (
                 <motion.div
                     key="modal-overlay"
