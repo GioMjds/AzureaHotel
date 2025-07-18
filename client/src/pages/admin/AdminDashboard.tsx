@@ -10,7 +10,7 @@ import { Doughnut, Line } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import StatCard from "../../components/admin/StatCard";
-import DashboardSkeleton from "../../motions/skeletons/AdminDashboardSkeleton";
+import DashboardSkeleton, { FoodOrdersCommissionSkeleton } from "../../motions/skeletons/AdminDashboardSkeleton";
 import {
   calculateCommissionFromMobileOrders,
   calculateDailyCommissionData,
@@ -121,11 +121,13 @@ const AdminDashboard = () => {
   });
 
   const commissionStats = useMemo(() => {
-    return calculateCommissionFromMobileOrders(
+    const result = calculateCommissionFromMobileOrders(
       mobileOrdersQuery.data,
       selectedMonth,
       selectedYear
     );
+
+    return result;
   }, [mobileOrdersQuery.data, selectedMonth, selectedYear]);
 
   const dailyCommissionData = useMemo(() => {
@@ -384,103 +386,136 @@ const AdminDashboard = () => {
       </div>
 
       {/* Commission Tracking Section */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold text-gray-800">Food Orders Commission</h2>
-        </div>
+      {mobileOrdersQuery.isPending ? (
+        <FoodOrdersCommissionSkeleton />
+      ) : (
+        <motion.div
+          variants={itemVariants}
+          className="bg-white shadow-lg rounded-lg p-6 mb-6"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-800">Food Orders Commission</h2>
+          </div>
 
-        {/* Commission Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-semibold">Total Food Orders</h3>
-            <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
-            <p className="text-sm mt-1">For {formattedMonthYear}</p>
+          {/* Commission Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow"
+            >
+              <h3 className="text-md font-semibold">Total Food Orders</h3>
+              <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
+              <p className="text-sm mt-1">For {formattedMonthYear}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow"
+            >
+              <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
+              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
+              <p className="text-sm mt-1">From {commissionStats?.completed_orders || 0} completed order</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow"
+            >
+              <h3 className="text-lg font-semibold">Total Food Sales</h3>
+              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
+              <p className="text-sm mt-1">For {formattedMonthYear}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow"
+            >
+              <h3 className="text-md font-semibold">Avg Commission</h3>
+              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>
+              <p className="text-sm mt-1">Per completed order</p>
+            </motion.div>
           </div>
-          <div className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
-            <p className="text-sm mt-1">From {commissionStats?.completed_orders || 0} completed orders</p>
-          </div>
-          <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold">Total Food Sales</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
-            <p className="text-sm mt-1">For {formattedMonthYear}</p>
-          </div>
-          <div className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-semibold">Avg Commission</h3>
-            <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>
-            <p className="text-sm mt-1">Per completed order</p>
-          </div>
-        </div>
 
-        {/* Daily Commission Line Graph */}
-        <div className="mt-6" ref={dailyCommissionChartRef}>
-          <h3 className="text-2xl font-semibold mb-4 text-gray-800">Daily Commission Trend - {formattedMonthYear}</h3>
-          <div className="h-64">
-            <Line
-              data={{
-                labels: dailyCommissionData.dailyLabels,
-                datasets: [
-                  {
-                    label: 'Daily Commission Earned',
-                    data: dailyCommissionData.dailyCommission,
-                    borderColor: 'rgb(59, 130, 246)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: 'rgb(59, 130, 246)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: true,
-                    position: 'top',
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: (context) => {
-                        const value = context.raw as number;
-                        return `Commission: ${formatCurrency(value)}`;
+          {/* Daily Commission Line Graph */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-6"
+            ref={dailyCommissionChartRef}
+          >
+            <h3 className="text-2xl font-semibold mb-4 text-gray-800">Daily Commission Trend - {formattedMonthYear}</h3>
+            <div className="h-64">
+              <Line
+                data={{
+                  labels: dailyCommissionData.dailyLabels,
+                  datasets: [
+                    {
+                      label: 'Daily Commission Earned',
+                      data: dailyCommissionData.dailyCommission,
+                      borderColor: 'rgb(59, 130, 246)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                      pointRadius: 4,
+                      pointHoverRadius: 6,
+                      pointBackgroundColor: 'rgb(59, 130, 246)',
+                      pointBorderColor: 'white',
+                      pointBorderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'top',
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          const value = context.raw as number;
+                          return `Commission: ${formatCurrency(value)}`;
+                        },
                       },
                     },
                   },
-                },
-                scales: {
-                  x: {
-                    title: {
-                      display: true,
-                      text: 'Day of Month',
+                  scales: {
+                    x: {
+                      title: {
+                        display: true,
+                        text: 'Day of Month',
+                      },
+                      grid: {
+                        display: false,
+                      },
                     },
-                    grid: {
-                      display: false,
-                    },
-                  },
-                  y: {
-                    title: {
-                      display: true,
-                      text: 'Commission Amount (₱)',
-                    },
-                    beginAtZero: true,
-                    ticks: {
-                      callback: function (value) {
-                        return formatCurrency(value as number);
+                    y: {
+                      title: {
+                        display: true,
+                        text: 'Commission Amount (₱)',
+                      },
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function (value) {
+                          return formatCurrency(value as number);
+                        },
                       },
                     },
                   },
-                },
-              }}
-            />
-          </div>
-        </div>
-      </div>
+                }}
+              />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <div className="bg-white shadow-lg rounded-lg p-4 mb-6">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">

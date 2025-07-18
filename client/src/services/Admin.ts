@@ -877,20 +877,20 @@ export const fetchCommissionStats = async (
   }
 };
 
-/**
- * Calculate commission from mobile food orders
- * Only counts completed and reviewed orders for commission calculation
- * @param mobileOrdersData - Response data from mobile orders API
- * @param selectedMonth - Optional month filter (1-12)
- * @param selectedYear - Optional year filter
- * @returns Commission statistics including total commission, sales, and order counts
- */
 export const calculateCommissionFromMobileOrders = (
   mobileOrdersData: MobileOrdersResponse | undefined,
   selectedMonth?: number,
   selectedYear?: number
 ) => {
+  console.log("🔍 calculateCommissionFromMobileOrders called with:", {
+    hasData: !!mobileOrdersData,
+    customersCount: mobileOrdersData?.customers?.length || 0,
+    selectedMonth,
+    selectedYear,
+  });
+
   if (!mobileOrdersData || !mobileOrdersData.customers) {
+    console.log("❌ No mobile orders data found");
     return {
       total_orders: 0,
       total_commission: 0,
@@ -908,25 +908,54 @@ export const calculateCommissionFromMobileOrders = (
   let completedOrders = 0;
   let completedSales = 0;
 
-  mobileOrdersData.customers.forEach((customer) => {
+  mobileOrdersData.customers.forEach((customer, customerIndex) => {
+    console.log(`👤 Customer ${customerIndex + 1}:`, {
+      email: customer.customer.email,
+      hotel_user: customer.customer.hotel_user,
+      orders_count: customer.orders.length,
+    });
+
     // Filter only hotel users (hotel_user: true or hotel_user: 1)
     if (!customer.customer.hotel_user) {
+      console.log(
+        `❌ Customer ${customer.customer.email} is not a hotel user, skipping`
+      );
       return;
     }
 
-    customer.orders.forEach((order) => {
+    customer.orders.forEach((order, orderIndex) => {
+      console.log(
+        `📦 Order ${orderIndex + 1} for ${customer.customer.email}:`,
+        {
+          order_id: order.order_id,
+          status: order.status,
+          total_amount: order.total_amount,
+          ordered_at: order.ordered_at,
+        }
+      );
+
       if (selectedMonth && selectedYear) {
         const orderDate = new Date(order.ordered_at);
         const orderMonth = orderDate.getMonth() + 1;
         const orderYear = orderDate.getFullYear();
 
+        console.log(
+          `📅 Date check: order (${orderMonth}/${orderYear}) vs selected (${selectedMonth}/${selectedYear})`
+        );
+
         if (orderMonth !== selectedMonth || orderYear !== selectedYear) {
+          console.log(
+            `❌ Order date doesn't match selected month/year, skipping`
+          );
           return;
         }
       }
 
-      // Only count and calculate commission for completed orders
+      // Only count and calculate commission for completed and reviewed orders
       if (order.status === "Completed" || order.status === "Reviewed") {
+        console.log(
+          `✅ Order ${order.order_id} qualifies for commission: ${order.status}, ₱${order.total_amount}`
+        );
         totalOrders++;
         totalSales += order.total_amount;
         totalCommission += order.total_amount * commissionRate;
@@ -939,7 +968,7 @@ export const calculateCommissionFromMobileOrders = (
   const averageCommissionPerOrder =
     totalOrders > 0 ? totalCommission / totalOrders : 0;
 
-  return {
+  const finalResult = {
     total_orders: totalOrders,
     total_commission: totalCommission,
     total_sales: totalSales,
@@ -947,16 +976,11 @@ export const calculateCommissionFromMobileOrders = (
     completed_orders: completedOrders,
     completed_sales: completedSales,
   };
+
+  console.log("💰 Final commission calculation result:", finalResult);
+  return finalResult;
 };
 
-/**
- * Calculate daily commission data for chart visualization
- * Only includes commission from completed and reviewed orders
- * @param mobileOrdersData - Response data from mobile orders API
- * @param selectedMonth - Month to calculate for (1-12)
- * @param selectedYear - Year to calculate for
- * @returns Daily commission breakdown with labels and totals
- */
 export const calculateDailyCommissionData = (
   mobileOrdersData: MobileOrdersResponse | undefined,
   selectedMonth?: number,
@@ -1032,10 +1056,14 @@ export const fetchMobileOrders = async (
       params.year = year;
     }
 
-    const response = await axios.get("http://192.168.1.13:5000/Admin/morders", {
+    console.log("🔍 Fetching mobile orders with params:", params);
+
+    const response = await axios.get("http://192.168.16.155:5000/Admin/morders", {
       params,
       withCredentials: true,
     });
+
+    console.log("📦 Mobile orders response:", response.data);
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch mobile orders: ${error}`);

@@ -722,12 +722,12 @@ const OrderFoodModal: FC<OrderFoodModalProps> = ({ bookingId, isOpen, onClose })
                     <Modal
                         isOpen={showFinalConfirmModal}
                         title="Confirm Food Order Submission"
-                        description={`Are you sure you want to submit this food order? Total: ₱${getTotalPrice().toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
+                        description="Are you sure you want to submit this food order?"
                         cancel={() => setShowFinalConfirmModal(false)}
                         onConfirm={confirmFinalOrder}
-                        confirmText="Yes, Submit Order"
-                        cancelText="No, Cancel"
-                        className="px-4 py-2 bg-emerald-600 text-white rounded-md font-bold hover:bg-emerald-700 transition-all duration-300 cursor-pointer"
+                        confirmText="Submit Order"
+                        cancelText="Cancel"
+                        className="px-4 py-2 bg-orange-600 text-white rounded-md font-bold hover:bg-orange-700 transition-all duration-300 cursor-pointer"
                         loading={placeOrderMutation.isPending}
                     />
                 )}

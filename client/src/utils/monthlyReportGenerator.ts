@@ -137,8 +137,14 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
   const kpis = [
     { label: "Active Bookings", value: data.stats.activeBookings.toString() },
     { label: "Pending Bookings", value: data.stats.pendingBookings.toString() },
-    { label: "Total Monthly Bookings", value: data.stats.totalBookings.toLocaleString() },
-    { label: "Monthly Revenue (in peso)", value: `${data.stats.revenue.toLocaleString()}0` },
+    {
+      label: "Total Monthly Bookings",
+      value: data.stats.totalBookings.toLocaleString(),
+    },
+    {
+      label: "Monthly Revenue (in peso)",
+      value: `${data.stats.revenue.toLocaleString()}.00`,
+    },
   ];
 
   const columns = 2;
@@ -350,7 +356,7 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
 
     doc.setFontSize(styles.fonts.normal);
     doc.setTextColor(styles.colors.secondary);
-    const commissionText = `Food orders commission represents additional revenue stream from mobile app orders. The hotel earns a 20% commission on completed food orders placed through the mobile application.`;
+    const commissionText = `Food orders commission represents additional revenue stream from mobile app orders. The hotel earns a 20% commission on completed and reviewed food orders placed through the mobile application.`;
 
     const commissionLines = doc.splitTextToSize(
       commissionText,
@@ -392,7 +398,7 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
     drawKpiBox(
       doc,
       "Commission Earned (in peso)",
-      `${(data.commissionStats.total_commission || 0).toLocaleString()}0`,
+      `${(data.commissionStats.total_commission || 0).toLocaleString()}.00`,
       styles.spacing.margin,
       secondRowY,
       kpiWidth,
@@ -402,7 +408,9 @@ export const generateNativePDF = (data: MonthlyReportData): jsPDF => {
     drawKpiBox(
       doc,
       "Avg Per Order (in peso)",
-      `${(data.commissionStats.average_commission_per_order || 0).toLocaleString()}0`,
+      `${(
+        data.commissionStats.average_commission_per_order || 0
+      ).toLocaleString()}.00`,
       styles.spacing.margin + kpiWidth + 10,
       secondRowY,
       kpiWidth,
