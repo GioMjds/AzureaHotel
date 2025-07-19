@@ -404,6 +404,7 @@ const AdminDashboard = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
               className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow"
+              title="Total food orders placed this month"
             >
               <h3 className="text-md font-semibold">Total Food Orders</h3>
               <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
@@ -414,6 +415,7 @@ const AdminDashboard = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.1 }}
               className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow"
+              title="Total commission earned from food orders this month"
             >
               <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
               <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
@@ -424,16 +426,18 @@ const AdminDashboard = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.2 }}
               className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow"
+              title="Total food sales this month"
             >
               <h3 className="text-lg font-semibold">Total Food Sales</h3>
               <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
-              <p className="text-sm mt-1">For {formattedMonthYear}</p>
+              <p className="text-sm mt-1">For {formattedMonthYear}</p>  
             </motion.div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.3 }}
               className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow"
+              title="Average commission earned per completed order this month"
             >
               <h3 className="text-md font-semibold">Avg Commission</h3>
               <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>

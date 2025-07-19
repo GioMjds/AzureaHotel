@@ -851,7 +851,6 @@ export const fetchMonthlyRevenue = async (month: number, year: number) => {
   }
 };
 
-// Commission and Sales APIs
 export const fetchCommissionStats = async (
   filter: string = "month",
   startDate?: string,
@@ -882,15 +881,7 @@ export const calculateCommissionFromMobileOrders = (
   selectedMonth?: number,
   selectedYear?: number
 ) => {
-  console.log("🔍 calculateCommissionFromMobileOrders called with:", {
-    hasData: !!mobileOrdersData,
-    customersCount: mobileOrdersData?.customers?.length || 0,
-    selectedMonth,
-    selectedYear,
-  });
-
   if (!mobileOrdersData || !mobileOrdersData.customers) {
-    console.log("❌ No mobile orders data found");
     return {
       total_orders: 0,
       total_commission: 0,
@@ -908,54 +899,23 @@ export const calculateCommissionFromMobileOrders = (
   let completedOrders = 0;
   let completedSales = 0;
 
-  mobileOrdersData.customers.forEach((customer, customerIndex) => {
-    console.log(`👤 Customer ${customerIndex + 1}:`, {
-      email: customer.customer.email,
-      hotel_user: customer.customer.hotel_user,
-      orders_count: customer.orders.length,
-    });
-
-    // Filter only hotel users (hotel_user: true or hotel_user: 1)
+  mobileOrdersData.customers.forEach((customer) => {
     if (!customer.customer.hotel_user) {
-      console.log(
-        `❌ Customer ${customer.customer.email} is not a hotel user, skipping`
-      );
       return;
     }
 
-    customer.orders.forEach((order, orderIndex) => {
-      console.log(
-        `📦 Order ${orderIndex + 1} for ${customer.customer.email}:`,
-        {
-          order_id: order.order_id,
-          status: order.status,
-          total_amount: order.total_amount,
-          ordered_at: order.ordered_at,
-        }
-      );
-
+    customer.orders.forEach((order) => {
       if (selectedMonth && selectedYear) {
         const orderDate = new Date(order.ordered_at);
         const orderMonth = orderDate.getMonth() + 1;
         const orderYear = orderDate.getFullYear();
 
-        console.log(
-          `📅 Date check: order (${orderMonth}/${orderYear}) vs selected (${selectedMonth}/${selectedYear})`
-        );
-
         if (orderMonth !== selectedMonth || orderYear !== selectedYear) {
-          console.log(
-            `❌ Order date doesn't match selected month/year, skipping`
-          );
           return;
         }
       }
 
-      // Only count and calculate commission for completed and reviewed orders
       if (order.status === "Completed" || order.status === "Reviewed") {
-        console.log(
-          `✅ Order ${order.order_id} qualifies for commission: ${order.status}, ₱${order.total_amount}`
-        );
         totalOrders++;
         totalSales += order.total_amount;
         totalCommission += order.total_amount * commissionRate;
@@ -977,7 +937,6 @@ export const calculateCommissionFromMobileOrders = (
     completed_sales: completedSales,
   };
 
-  console.log("💰 Final commission calculation result:", finalResult);
   return finalResult;
 };
 
@@ -1005,7 +964,6 @@ export const calculateDailyCommissionData = (
   const dailyLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
 
   mobileOrdersData.customers.forEach((customer) => {
-    // Filter only hotel users (hotel_user: 1)
     if (!customer.customer.hotel_user) {
       return;
     }
@@ -1056,14 +1014,11 @@ export const fetchMobileOrders = async (
       params.year = year;
     }
 
-    console.log("🔍 Fetching mobile orders with params:", params);
-
     const response = await axios.get("http://192.168.16.155:5000/Admin/morders", {
       params,
       withCredentials: true,
     });
 
-    console.log("📦 Mobile orders response:", response.data);
     return response.data;
   } catch (error) {
     console.error(`Failed to fetch mobile orders: ${error}`);
