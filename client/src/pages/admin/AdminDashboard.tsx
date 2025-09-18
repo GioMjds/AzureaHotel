@@ -1,6 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, LineElement, PointElement, Tooltip } from "chart.js";
-import { format, getDay, isAfter, isSameDay, parse, startOfWeek } from "date-fns";
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import {
+  format,
+  getDay,
+  isAfter,
+  isSameDay,
+  parse,
+  startOfWeek,
+} from "date-fns";
 import { enUS } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
@@ -10,7 +27,7 @@ import { Doughnut, Line } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import StatCard from "../../components/admin/StatCard";
-import DashboardSkeleton, { FoodOrdersCommissionSkeleton } from "../../motions/skeletons/AdminDashboardSkeleton";
+import DashboardSkeleton from "../../motions/skeletons/AdminDashboardSkeleton";
 import {
   calculateCommissionFromMobileOrders,
   calculateDailyCommissionData,
@@ -27,14 +44,34 @@ import {
   fetchStats,
 } from "../../services/Admin";
 import "../../styles/report-modal.css";
-import { CalendarEvent, EventComponentProps, ViewType } from "../../types/DashboardTypes";
-import { formatCurrency, formatMonthYear, getDaysInMonth } from "../../utils/formatters";
-import { generateNativePDF, prepareMonthlyReportData } from "../../utils/monthlyReportGenerator";
+import {
+  CalendarEvent,
+  EventComponentProps,
+  ViewType,
+} from "../../types/DashboardTypes";
+import {
+  formatCurrency,
+  formatMonthYear,
+  getDaysInMonth,
+} from "../../utils/formatters";
+import {
+  generateNativePDF,
+  prepareMonthlyReportData,
+} from "../../utils/monthlyReportGenerator";
 import Error from "../_ErrorBoundary";
 
-Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
+Chart.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement
+);
 
-const locales = { 'en-US': enUS };
+const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({
   format,
   parse,
@@ -65,7 +102,7 @@ const AdminDashboard = () => {
   });
 
   const { data: dailyRevenueData } = useQuery({
-    queryKey: ['dailyRevenue', selectedMonth, selectedYear],
+    queryKey: ["dailyRevenue", selectedMonth, selectedYear],
     queryFn: () => fetchDailyRevenue(selectedMonth, selectedYear),
     select: (data) => data.data || [],
   });
@@ -75,17 +112,24 @@ const AdminDashboard = () => {
     queryFn: () => fetchBookingStatusCounts(selectedMonth, selectedYear),
   });
 
-  const { data: dailyBookingsResponse, isLoading: bookingsDataLoading } = useQuery({
-    queryKey: ["dailyBookings", selectedMonth, selectedYear],
-    queryFn: () => fetchDailyBookings(selectedMonth, selectedYear),
-  });
+  const { data: dailyBookingsResponse, isLoading: bookingsDataLoading } =
+    useQuery({
+      queryKey: ["dailyBookings", selectedMonth, selectedYear],
+      queryFn: () => fetchDailyBookings(selectedMonth, selectedYear),
+    });
 
-  const { data: dailyCancellationsResponse, isLoading: cancellationsDataLoading } = useQuery({
+  const {
+    data: dailyCancellationsResponse,
+    isLoading: cancellationsDataLoading,
+  } = useQuery({
     queryKey: ["dailyCancellations", selectedMonth, selectedYear],
     queryFn: () => fetchDailyCancellations(selectedMonth, selectedYear),
   });
 
-  const { data: dailyNoShowsRejectedResponse, isLoading: noShowsRejectedDataLoading } = useQuery({
+  const {
+    data: dailyNoShowsRejectedResponse,
+    isLoading: noShowsRejectedDataLoading,
+  } = useQuery({
     queryKey: ["dailyNoShowsRejected", selectedMonth, selectedYear],
     queryFn: () => fetchDailyNoShowsRejected(selectedMonth, selectedYear),
   });
@@ -96,7 +140,7 @@ const AdminDashboard = () => {
     select: (data) => ({
       area_names: data.area_names || [],
       revenue_data: data.revenue_data || [],
-    })
+    }),
   });
 
   const { data: roomRevenueResponse } = useQuery({
@@ -139,9 +183,21 @@ const AdminDashboard = () => {
   }, [mobileOrdersQuery.data, selectedMonth, selectedYear]);
 
   const calendarEventsQuery = useQuery({
-    queryKey: ['calendarEvents', selectedMonth, selectedYear, dailyRevenueData, dailyBookingsResponse, dailyCancellationsResponse, dailyNoShowsRejectedResponse],
+    queryKey: [
+      "calendarEvents",
+      selectedMonth,
+      selectedYear,
+      dailyRevenueData,
+      dailyBookingsResponse,
+      dailyCancellationsResponse,
+      dailyNoShowsRejectedResponse,
+    ],
     queryFn: async () => {
-      const daysInMonthArray = getDaysInMonth(selectedMonth, selectedYear, true);
+      const daysInMonthArray = getDaysInMonth(
+        selectedMonth,
+        selectedYear,
+        true
+      );
       const events: CalendarEvent[] = [];
 
       const dailyRevenueValues = dailyRevenueData || [];
@@ -154,7 +210,11 @@ const AdminDashboard = () => {
         const dayNumber = parseInt(day.toString(), 10);
         if (isNaN(dayNumber)) return;
 
-        const currentDate = new Date(selectedYear, selectedMonth - 1, dayNumber);
+        const currentDate = new Date(
+          selectedYear,
+          selectedMonth - 1,
+          dayNumber
+        );
 
         events.push({
           id: `revenue-${index}`,
@@ -163,14 +223,14 @@ const AdminDashboard = () => {
           end: currentDate,
           allDay: true,
           resource: {
-            type: 'revenue',
+            type: "revenue",
             value: dailyRevenueValues[index] || 0,
             bookings: dailyBookingsData[index] || 0,
             cancellations: dailyCancellations[index] || 0,
             noShows: dailyNoShows[index] || 0,
-            rejected: dailyRejected[index] || 0
-          }
-        })
+            rejected: dailyRejected[index] || 0,
+          },
+        });
       });
 
       return events;
@@ -181,11 +241,16 @@ const AdminDashboard = () => {
       !cancellationsDataLoading &&
       !noShowsRejectedDataLoading &&
       dailyRevenueData
-    )
+    ),
   });
 
-  const totalMonthlyHotelRevenue = dailyRevenueData?.reduce((sum: number, dailyRevenue: number) => sum + (dailyRevenue || 0), 0) || 0;
-  const totalMonthlyRevenue = totalMonthlyHotelRevenue + (commissionStats?.total_commission || 0);
+  const totalMonthlyHotelRevenue =
+    dailyRevenueData?.reduce(
+      (sum: number, dailyRevenue: number) => sum + (dailyRevenue || 0),
+      0
+    ) || 0;
+  const totalMonthlyRevenue =
+    totalMonthlyHotelRevenue + (commissionStats?.total_commission || 0);
 
   const stats = {
     activeBookings: data?.active_bookings || 0,
@@ -205,7 +270,9 @@ const AdminDashboard = () => {
     formattedRevenue: formatCurrency(totalMonthlyRevenue),
     formattedRoomRevenue: data?.formatted_room_revenue,
     formattedVenueRevenue: data?.formatted_venue_revenue,
-    formattedCommissionRevenue: formatCurrency(commissionStats?.total_commission || 0),
+    formattedCommissionRevenue: formatCurrency(
+      commissionStats?.total_commission || 0
+    ),
     revenueMonth: selectedMonth,
     revenueYear: selectedYear,
   };
@@ -261,7 +328,7 @@ const AdminDashboard = () => {
 
     const getCanvasFromRef = (ref: React.RefObject<HTMLDivElement>) => {
       if (!ref.current) return null;
-      return ref.current.querySelector('canvas');
+      return ref.current.querySelector("canvas");
     };
 
     const bookingStatusCanvas = getCanvasFromRef(bookingStatusChartRef);
@@ -269,16 +336,20 @@ const AdminDashboard = () => {
     const roomRevenueCanvas = getCanvasFromRef(roomRevenueChartRef);
     const dailyCommissionCanvas = getCanvasFromRef(dailyCommissionChartRef);
 
-    if (bookingStatusCanvas) reportData.charts.bookingStatusChart = bookingStatusCanvas;
-    if (areaRevenueCanvas) reportData.charts.areaRevenueChart = areaRevenueCanvas;
-    if (roomRevenueCanvas) reportData.charts.roomRevenueChart = roomRevenueCanvas;
-    if (dailyCommissionCanvas) reportData.charts.dailyCommissionChart = dailyCommissionCanvas;
+    if (bookingStatusCanvas)
+      reportData.charts.bookingStatusChart = bookingStatusCanvas;
+    if (areaRevenueCanvas)
+      reportData.charts.areaRevenueChart = areaRevenueCanvas;
+    if (roomRevenueCanvas)
+      reportData.charts.roomRevenueChart = roomRevenueCanvas;
+    if (dailyCommissionCanvas)
+      reportData.charts.dailyCommissionChart = dailyCommissionCanvas;
 
     const pdfDoc = generateNativePDF(reportData);
 
-    const pdfBlob = pdfDoc.output('blob');
+    const pdfBlob = pdfDoc.output("blob");
     const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
+    window.open(pdfUrl, "_blank");
   };
 
   const EventComponent = ({ event }: EventComponentProps) => {
@@ -287,12 +358,14 @@ const AdminDashboard = () => {
     return (
       <div className="flex flex-col p-1 text-xs overflow-hidden h-full">
         <div className="font-semibold">{event.title}</div>
-        {resource.type === 'revenue' && (
+        {resource.type === "revenue" && (
           <>
             <div>Bookings: {resource.bookings}</div>
             <div>Cancellations: {resource.cancellations}</div>
             {(resource.noShows > 0 || resource.rejected > 0) && (
-              <div>No Shows: {resource.noShows} | Rejected: {resource.rejected}</div>
+              <div>
+                No Shows: {resource.noShows} | Rejected: {resource.rejected}
+              </div>
             )}
           </>
         )}
@@ -308,7 +381,7 @@ const AdminDashboard = () => {
         staggerChildren: 0.1,
         delayChildren: 0.2,
       },
-    }
+    },
   };
 
   const itemVariants = {
@@ -386,144 +459,157 @@ const AdminDashboard = () => {
       </div>
 
       {/* Commission Tracking Section */}
-      {mobileOrdersQuery.isPending ? (
-        <FoodOrdersCommissionSkeleton />
-      ) : (
-        <motion.div
-          variants={itemVariants}
-          className="bg-white shadow-lg rounded-lg p-6 mb-6"
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold text-gray-800">Food Orders Commission</h2>
-          </div>
+      <motion.div
+        variants={itemVariants}
+        className="bg-white shadow-lg rounded-lg p-6 mb-6"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold text-gray-800">
+            Food Orders Commission
+          </h2>
+        </div>
 
-          {/* Commission Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow"
-              title="Total food orders placed this month"
-            >
-              <h3 className="text-md font-semibold">Total Food Orders</h3>
-              <p className="text-2xl font-bold">{commissionStats?.total_orders || 0}</p>
-              <p className="text-sm mt-1">For {formattedMonthYear}</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow"
-              title="Total commission earned from food orders this month"
-            >
-              <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
-              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_commission || 0)}</p>
-              <p className="text-sm mt-1">From {commissionStats?.completed_orders || 0} completed order</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow"
-              title="Total food sales this month"
-            >
-              <h3 className="text-lg font-semibold">Total Food Sales</h3>
-              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.total_sales || 0)}</p>
-              <p className="text-sm mt-1">For {formattedMonthYear}</p>  
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow"
-              title="Average commission earned per completed order this month"
-            >
-              <h3 className="text-md font-semibold">Avg Commission</h3>
-              <p className="text-2xl font-bold">{formatCurrency(commissionStats?.average_commission_per_order || 0)}</p>
-              <p className="text-sm mt-1">Per completed order</p>
-            </motion.div>
-          </div>
-
-          {/* Daily Commission Line Graph */}
+        {/* Commission Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-6"
-            ref={dailyCommissionChartRef}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-gradient-to-r from-green-400 to-green-600 text-white p-4 rounded-lg shadow"
+            title="Total food orders placed this month"
           >
-            <h3 className="text-2xl font-semibold mb-4 text-gray-800">Daily Commission Trend - {formattedMonthYear}</h3>
-            <div className="h-64">
-              <Line
-                data={{
-                  labels: dailyCommissionData.dailyLabels,
-                  datasets: [
-                    {
-                      label: 'Daily Commission Earned',
-                      data: dailyCommissionData.dailyCommission,
-                      borderColor: 'rgb(59, 130, 246)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      fill: true,
-                      tension: 0.4,
-                      pointRadius: 4,
-                      pointHoverRadius: 6,
-                      pointBackgroundColor: 'rgb(59, 130, 246)',
-                      pointBorderColor: 'white',
-                      pointBorderWidth: 2,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: 'top',
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: (context) => {
-                          const value = context.raw as number;
-                          return `Commission: ${formatCurrency(value)}`;
-                        },
-                      },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      title: {
-                        display: true,
-                        text: 'Day of Month',
-                      },
-                      grid: {
-                        display: false,
-                      },
-                    },
-                    y: {
-                      title: {
-                        display: true,
-                        text: 'Commission Amount (₱)',
-                      },
-                      beginAtZero: true,
-                      ticks: {
-                        callback: function (value) {
-                          return formatCurrency(value as number);
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
-            </div>
+            <h3 className="text-md font-semibold">Total Food Orders</h3>
+            <p className="text-2xl font-bold">
+              {commissionStats?.total_orders || 0}
+            </p>
+            <p className="text-sm mt-1">For {formattedMonthYear}</p>
           </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-4 rounded-lg shadow"
+            title="Total commission earned from food orders this month"
+          >
+            <h3 className="text-md font-semibold">Commission Earned (20%)</h3>
+            <p className="text-2xl font-bold">
+              {formatCurrency(commissionStats?.total_commission || 0)}
+            </p>
+            <p className="text-sm mt-1">
+              From {commissionStats?.completed_orders || 0} completed order
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-4 rounded-lg shadow"
+            title="Total food sales this month"
+          >
+            <h3 className="text-lg font-semibold">Total Food Sales</h3>
+            <p className="text-2xl font-bold">
+              {formatCurrency(commissionStats?.total_sales || 0)}
+            </p>
+            <p className="text-sm mt-1">For {formattedMonthYear}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-gradient-to-r from-orange-400 to-orange-600 text-white p-4 rounded-lg shadow"
+            title="Average commission earned per completed order this month"
+          >
+            <h3 className="text-md font-semibold">Avg Commission</h3>
+            <p className="text-2xl font-bold">
+              {formatCurrency(
+                commissionStats?.average_commission_per_order || 0
+              )}
+            </p>
+            <p className="text-sm mt-1">Per completed order</p>
+          </motion.div>
+        </div>
+
+        {/* Daily Commission Line Graph */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-6"
+          ref={dailyCommissionChartRef}
+        >
+          <h3 className="text-2xl font-semibold mb-4 text-gray-800">
+            Daily Commission Trend - {formattedMonthYear}
+          </h3>
+          <div className="h-64">
+            <Line
+              data={{
+                labels: dailyCommissionData.dailyLabels,
+                datasets: [
+                  {
+                    label: "Daily Commission Earned",
+                    data: dailyCommissionData.dailyCommission,
+                    borderColor: "rgb(59, 130, 246)",
+                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: "rgb(59, 130, 246)",
+                    pointBorderColor: "white",
+                    pointBorderWidth: 2,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: "top",
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: (context) => {
+                        const value = context.raw as number;
+                        return `Commission: ${formatCurrency(value)}`;
+                      },
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    title: {
+                      display: true,
+                      text: "Day of Month",
+                    },
+                    grid: {
+                      display: false,
+                    },
+                  },
+                  y: {
+                    title: {
+                      display: true,
+                      text: "Commission Amount (₱)",
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function (value) {
+                        return formatCurrency(value as number);
+                      },
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
         </motion.div>
-      )}
+      </motion.div>
 
       <div className="bg-white shadow-lg rounded-lg p-4 mb-6">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-          {view === 'month' ? 'Monthly' : view === 'week' ? 'Weekly' : 'Daily'} Calendar - {formattedMonthYear}
+          {view === "month" ? "Monthly" : view === "week" ? "Weekly" : "Daily"}{" "}
+          Calendar - {formattedMonthYear}
         </h2>
 
         <div className="h-[700px]">
@@ -544,22 +630,31 @@ const AdminDashboard = () => {
             popup
             eventPropGetter={(event) => {
               const { type } = event.resource || {};
-              let backgroundColor = '#4CAF50';
+              let backgroundColor = "#4CAF50";
 
-              if (type === 'revenue' && event.resource.value === 0) {
-                backgroundColor = '#E0E0E0';
+              if (type === "revenue" && event.resource.value === 0) {
+                backgroundColor = "#E0E0E0";
               }
 
               return {
                 style: {
                   backgroundColor,
-                  borderRadius: '4px',
-                  color: '#fff',
-                  border: 'none',
-                }
+                  borderRadius: "4px",
+                  color: "#fff",
+                  border: "none",
+                },
               };
             }}
-            max={new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)}
+            max={
+              new Date(
+                today.getFullYear(),
+                today.getMonth(),
+                today.getDate(),
+                23,
+                59,
+                59
+              )
+            }
           />
         </div>
       </div>
@@ -592,7 +687,9 @@ const AdminDashboard = () => {
                   className="flex items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-semibold text-lg text-gray-700">{room}</p>
+                    <p className="font-semibold text-lg text-gray-700">
+                      {room}
+                    </p>
                     <p className="text-sm text-gray-500">
                       {areaBookingValues[index] || 0} bookings
                     </p>
@@ -635,7 +732,9 @@ const AdminDashboard = () => {
                   className="flex items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-semibold text-lg text-gray-700">{room}</p>
+                    <p className="font-semibold text-lg text-gray-700">
+                      {room}
+                    </p>
                     <p className="text-sm text-gray-500">
                       {roomBookingValues[index] || 0} bookings
                     </p>
@@ -667,11 +766,11 @@ const AdminDashboard = () => {
           <Doughnut
             data={{
               labels: [
-                'Reserved',
-                'Checked Out',
-                'Cancelled',
-                'No Show',
-                'Rejected',
+                "Reserved",
+                "Checked Out",
+                "Cancelled",
+                "No Show",
+                "Rejected",
               ],
               datasets: [
                 {
@@ -683,13 +782,13 @@ const AdminDashboard = () => {
                     bookingStatusCounts.rejected,
                   ],
                   backgroundColor: [
-                    '#FFC107',
-                    '#2196F3',
-                    '#4CAF50',
-                    '#9E9E9E',
-                    '#F44336',
-                    '#9C27B0',
-                    '#FF5722',
+                    "#FFC107",
+                    "#2196F3",
+                    "#4CAF50",
+                    "#9E9E9E",
+                    "#F44336",
+                    "#9C27B0",
+                    "#FF5722",
                   ],
                   borderWidth: 2,
                 },
@@ -698,7 +797,7 @@ const AdminDashboard = () => {
             options={{
               plugins: {
                 legend: {
-                  position: 'right',
+                  position: "right",
                   labels: {
                     boxWidth: 15,
                     padding: 15,
@@ -707,10 +806,16 @@ const AdminDashboard = () => {
                 tooltip: {
                   callbacks: {
                     label: (context) => {
-                      const label = context.label || '';
+                      const label = context.label || "";
                       const value = context.raw || 0;
-                      const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                      const percentage = ((Number(value) * 100) / Number(total)).toFixed(1);
+                      const total = context.dataset.data.reduce(
+                        (a: number, b: number) => a + b,
+                        0
+                      );
+                      const percentage = (
+                        (Number(value) * 100) /
+                        Number(total)
+                      ).toFixed(1);
                       return `${label}: ${value} (${percentage}%)`;
                     },
                   },

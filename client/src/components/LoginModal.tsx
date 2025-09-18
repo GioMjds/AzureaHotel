@@ -110,13 +110,19 @@ const LoginModal: FC<LoginProps> = ({ toggleLoginModal, openSignupModal, onSucce
         setRole(user.role || "guest");
         queryClient.invalidateQueries({ queryKey: ['userAuth'] });
 
+        if (user.role === 'admin') {
+          toggleLoginModal();
+          navigate("/admin", { replace: true });
+          return;
+        }
+
         if (onSuccessfulLogin) {
           onSuccessfulLogin();
           return;
         }
 
-        if (user.role === "admin") navigate("/admin");
-        else navigate("/guest/bookings");
+        toggleLoginModal();
+        navigate("/guest/bookings", { replace: true });
       }
     },
     onError: (error: any) => {

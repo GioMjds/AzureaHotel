@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-refresh/only-export-components */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, FC, ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { authenticateUser } from "../services/Auth";
@@ -30,7 +28,7 @@ interface UserContextType {
     clearAuthState: () => void;
 }
 
-const UserContext = createContext<UserContextType | any>(null);
+const UserContext = createContext<UserContextType | null>(null);
 
 export const UserProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);

@@ -860,8 +860,6 @@ def update_booking_status(request, booking_id):
         active_statuses = ['pending', 'reserved', 'confirmed', 'checked_in']
         active_count = Bookings.objects.filter(status__in=active_statuses).count()
         
-        print(f"Sending WebSockets update - Active Count: {active_count}")
-        
         async_to_sync(channel_layer.group_send)(
             'admin_notifications',
             {
@@ -869,7 +867,6 @@ def update_booking_status(request, booking_id):
                 'count': active_count
             }
         )
-        print(f"📤 WebSocket notification sent with count: {active_count}")
     except Exception as e:
         print(f"WebSocket notification error: {str(e)}")
     
