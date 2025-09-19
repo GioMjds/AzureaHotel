@@ -14,6 +14,9 @@ google-auth-httplib2
 PyJWT
 channels==4.0.0
 daphne==4.1.0
-channels['daphne']
+# channels['daphne']
 whitenoise
 django-ipware
+mysqlclient
+
+# Note: Don't update / create your .venv using Python 3.13

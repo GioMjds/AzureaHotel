@@ -553,7 +553,6 @@ def delete_area(request, area_id):
 
 # CRUD Amenities
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def fetch_amenities(request):
     try:
         amenities = Amenities.objects.all().order_by('id')
