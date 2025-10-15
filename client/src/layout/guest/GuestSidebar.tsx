@@ -1,4 +1,4 @@
-import { Ban, Beef, Calendar, Home, User } from "lucide-react";
+import { Ban, Calendar, Home, User } from "lucide-react";
 import { FC } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useUserContext } from "../../contexts/AuthContext";
@@ -7,7 +7,7 @@ const menuItems = [
   { icon: <User size={23} />, label: "My Profile", link: "/guest/:id" },
   { icon: <Calendar size={23} />, label: "Bookings", link: "/guest/bookings" },
   { icon: <Ban size={23} />, label: "Cancellations", link: "/guest/cancellations" },
-  { icon: <Beef size={23} />, label: "Food Orders", link: "/guest/food-orders" },
+  // { icon: <Beef size={23} />, label: "Food Orders", link: "/guest/food-orders" },
 ];
 
 const GuestSidebar: FC = () => {

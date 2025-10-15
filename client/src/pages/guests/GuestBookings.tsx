@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Calendar, Eye, Filter, MessageSquare, Search, SearchIcon, Utensils, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Eye, Filter, MessageSquare, Search, SearchIcon, XCircle } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "react-toastify";
 import CancellationModal from "../../components/bookings/CancellationModal";
 import GuestBookingComment from "../../components/guests/GuestBookingComment";
-import OrderFoodModal from "../../components/guests/OrderFoodModal";
+// import OrderFoodModal from "../../components/guests/OrderFoodModal";
 import ViewBookingDetailsModal from "../../components/guests/ViewBookingDetailsModal";
 import { guestCancellationReasons } from "../../constants/Dropdown";
 import { useUserContext } from "../../contexts/AuthContext";
@@ -23,16 +23,16 @@ const GuestBookings = () => {
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
-  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
   const [cancellationBookingId, setCancellationBookingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
   const [reviewBookingDetails, setReviewBookingDetails] = useState<any>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<number>(null);
   const [showBookingDetailModal, setShowBookingDetailModal] = useState<boolean>(false);
-  const [showOrderFoodModal, setShowOrderFoodModal] = useState(false);
-  const [orderFoodBookingId, setOrderFoodBookingId] = useState(null);
+  // const [showOrderFoodModal, setShowOrderFoodModal] = useState<boolean>(false);
+  // const [orderFoodBookingId, setOrderFoodBookingId] = useState<number>(null);
 
   const queryClient = useQueryClient();
   const pageSize = 5;
@@ -369,7 +369,7 @@ const GuestBookings = () => {
                                 </span> */}
                               </div>
                             )}
-                            {booking.status.toLowerCase() === 'checked_in' && (
+                            {/* {booking.status.toLowerCase() === 'checked_in' && (
                               <div className="relative group">
                                 <button
                                   className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full flex items-center cursor-pointer transition-all duration-300"
@@ -379,12 +379,9 @@ const GuestBookings = () => {
                                   }}
                                 >
                                   <Utensils size={20} />
-                                  {/* <span className="absolute -left-1/2 -top-2 transform -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none shadow-lg">
-                                    Order Food
-                                  </span> */}
                                 </button>
                               </div>
-                            )}
+                            )} */}
                             {booking.status.toLowerCase() === 'checked_out' && (
                               <div className="relative group">
                                 <button
@@ -576,13 +573,13 @@ const GuestBookings = () => {
         />
       )}
 
-      {showOrderFoodModal && (
+      {/* {showOrderFoodModal && (
         <OrderFoodModal
           bookingId={orderFoodBookingId}
           isOpen={showOrderFoodModal}
           onClose={() => setShowOrderFoodModal(false)}
         />
-      )}
+      )} */}
     </div>
   );
 };

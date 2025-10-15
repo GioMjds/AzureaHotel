@@ -23,7 +23,7 @@ import { motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Doughnut, Line } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import StatCard from "../../components/admin/StatCard";
@@ -459,18 +459,18 @@ const AdminDashboard = () => {
       </div>
 
       {/* Commission Tracking Section */}
-      <motion.div
+      {/* <motion.div
         variants={itemVariants}
         className="bg-white shadow-lg rounded-lg p-6 mb-6"
-      >
-        <div className="flex justify-between items-center mb-4">
+      > */}
+        {/* <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-gray-800">
             Food Orders Commission
           </h2>
-        </div>
+        </div> */}
 
         {/* Commission Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -527,14 +527,13 @@ const AdminDashboard = () => {
             </p>
             <p className="text-sm mt-1">Per completed order</p>
           </motion.div>
-        </div>
+        </div> */}
 
         {/* Daily Commission Line Graph */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-6"
           ref={dailyCommissionChartRef}
         >
           <h3 className="text-2xl font-semibold mb-4 text-gray-800">
@@ -603,8 +602,8 @@ const AdminDashboard = () => {
               }}
             />
           </div>
-        </motion.div>
-      </motion.div>
+        </motion.div> */}
+      {/* </motion.div> */}
 
       <div className="bg-white shadow-lg rounded-lg p-4 mb-6">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">

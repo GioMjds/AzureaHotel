@@ -4,12 +4,18 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import ScrollToTop from "./components/ScrollToTop";
 import { useUserContext } from "./contexts/AuthContext";
 import ProtectedRoute from "./contexts/ProtectedRoutes";
+
+// Layout component
 import Footer from "./layout/Footer";
 import Navbar from "./layout/Navbar";
 
+// Loading hydrate
 const LoadingHydrate = lazy(() => import("./motions/loaders/LoadingHydrate"));
+
+// Not found component
 const NotFound = lazy(() => import("./pages/_NotFound"));
 
+// Public pages
 const Homepage = lazy(() => import("./pages/Homepage"));
 const AvailabilityResults = lazy(() => import("./pages/AvailabilityResults"));
 const ConfirmBooking = lazy(() => import("./pages/ConfirmBooking"));

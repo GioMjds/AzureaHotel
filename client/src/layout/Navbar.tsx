@@ -518,11 +518,11 @@ const Navbar: FC = () => {
                       onClick: () => navigate(`/guest/bookings`),
                       icon: <FontAwesomeIcon icon={faBookBookmark} />,
                     },
-                    {
-                      label: "My Food Orders",
-                      onClick: () => navigate(`/guest/food-orders`),
-                      icon: <FontAwesomeIcon icon={faPizzaSlice} />,
-                    },
+                    // {
+                    //   label: "My Food Orders",
+                    //   onClick: () => navigate(`/guest/food-orders`),
+                    //   icon: <FontAwesomeIcon icon={faPizzaSlice} />,
+                    // },
                     {
                       label: "Log Out",
                       onClick: () => setIsModalOpen(true),

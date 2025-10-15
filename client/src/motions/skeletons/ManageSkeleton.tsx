@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import React from 'react';
+import { FC } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
@@ -8,7 +8,7 @@ interface ManageSkeletonProps {
     type?: 'area' | 'room';
 }
 
-const ManageSkeleton: React.FC<ManageSkeletonProps> = ({
+const ManageSkeleton: FC<ManageSkeletonProps> = ({
     items = 9,
     type = 'area'
 }) => {
