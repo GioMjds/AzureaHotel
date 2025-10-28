@@ -18,5 +18,7 @@ daphne==4.1.0
 whitenoise
 django-ipware
 mysqlclient
+firebase_admin
+firebase
 
 # Note: Don't update / create your .venv using Python 3.13
