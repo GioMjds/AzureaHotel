@@ -487,7 +487,7 @@ def edit_area(request, area_id):
     except Areas.DoesNotExist:
         return Response({"error": "Area not found"}, status=status.HTTP_404_NOT_FOUND)
     data = request.data.copy()
-
+    
     if 'discount_percent' in data:
         try:
             discount = int(data['discount_percent'])
@@ -671,7 +671,7 @@ def delete_amenity(request, pk):
 @permission_classes([IsAuthenticated])
 def admin_bookings(request):
     try:
-        exclude_statuses = [
+        exclude_statuses = [    
             'cancelled',
             'rejected',
             'no_show',
@@ -1651,5 +1651,121 @@ def daily_no_shows_rejected(request):
         return Response({
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_report(request):
+    try:
+        month = int(request.query_params.get('month', timezone.now().month))
+        year = int(request.query_params.get('year', timezone.now().year))
 
-# Commission Tracking APIs
+        # Date range
+        start_date = datetime(year, month, 1)
+
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
+
+        end_date = end_date.replace(hour=23, minute=59, second=59)
+
+        # Get bookings for the period
+        bookings = Bookings.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date,
+        )
+
+        # Get completed transactions for revenue
+        transactions = Transactions.objects.filter(
+            transaction_date__gte=start_date,
+            transaction_date__lte=end_date,
+            status='completed'
+        )
+
+        total_revenue = transactions.aggregate(Sum('amount'))['amount__sum'] or 0
+        room_revenue = transactions.filter(
+            booking__is_venue_booking=False
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+        venue_revenue = transactions.filter(
+            booking__is_venue_booking=True
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        # Stats
+        stats = {
+            "activeBookings": bookings.filter(status__in=['confirmed', 'reserved', 'checked_in']).count(),
+            "pendingBookings": bookings.filter(status='pending').count(),
+            "totalBookings": bookings.count(),
+            "revenue": float(total_revenue),
+            "formattedRevenue": f"₱{total_revenue:,.2f}",
+            "roomRevenue": float(room_revenue),
+            "venueRevenue": float(venue_revenue),
+            "totalRooms": Rooms.objects.count(),
+            "availableRooms": Rooms.objects.filter(status='available').count(),
+            "occupiedRooms": bookings.filter(
+                status='checked_in',
+                is_venue_booking=False
+            ).count(),
+            "maintenanceRooms": Rooms.objects.filter(status='maintenance').count(),
+            "checkedInCount": bookings.filter(status='checked_in').count(),
+        }
+
+        # Booking status counts
+        booking_status_counts = {
+            "reserved": bookings.filter(status='reserved').count(),
+            "checked_out": bookings.filter(status='checked_out').count(),
+            "cancelled": bookings.filter(status='cancelled').count(),
+            "no_show": bookings.filter(status='no_show').count(),
+            "rejected": bookings.filter(status='rejected').count(),
+        }
+
+        # Area Revenue + Bookings
+        areas = Areas.objects.all()
+        area_names = []
+        area_revenue_values = []
+        area_booking_values = []
+
+        for area in areas:
+            area_names.append(area.area_name)
+            area_revenue = transactions.filter(
+                booking__area=area,
+                booking__is_venue_booking=True
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
+            area_revenue_values.append(float(area_revenue))
+            area_booking_values.append(
+                bookings.filter(area=area, is_venue_booking=True).count()
+            )
+
+        # Room Revenue + Bookings
+        rooms = Rooms.objects.all()
+        room_names = []
+        room_revenue_values = []
+        room_booking_values = []
+
+        for room in rooms:
+            room_names.append(room.room_name)
+            room_revenue = transactions.filter(
+                booking__room=room,
+                booking__is_venue_booking=False
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
+            room_revenue_values.append(float(room_revenue))
+            room_booking_values.append(
+                bookings.filter(room=room, is_venue_booking=False).count()
+            )
+
+        return Response({
+            "period": start_date.strftime("%B %Y"),
+            "stats": stats,
+            "bookingStatusCounts": booking_status_counts,
+            "areaNames": area_names,
+            "areaRevenueValues": area_revenue_values,
+            "areaBookingValues": area_booking_values,
+            "roomNames": room_names,
+            "roomRevenueValues": room_revenue_values,
+            "roomBookingValues": room_booking_values,
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

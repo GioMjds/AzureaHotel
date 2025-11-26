@@ -17,6 +17,7 @@ urlpatterns = [
     path('room_bookings', views.room_bookings, name='room_bookings'),
     path('area_revenue', views.area_revenue, name='area_revenue'),
     path('area_bookings', views.area_bookings, name='area_bookings'),
+    path('generate_monthly_report', views.monthly_report, name='monthly_report'),
     
     # CRUD Rooms
     path('rooms', views.fetch_rooms, name='fetch_rooms'),
